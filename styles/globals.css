@@ -1,0 +1,53 @@
+/* styles/globals.css */
+@import "tailwindcss";
+
+@theme {
+  /* Palet Warna Custom "EcoMonitor/BMKG" */
+  --color-bmkg-50: #f0fdfa;
+  --color-bmkg-100: #ccfbf1;
+  --color-bmkg-200: #99f6e4;
+  --color-bmkg-300: #5eead4;
+  --color-bmkg-400: #2dd4bf;
+  --color-bmkg-500: #14b8a6;
+  --color-bmkg-600: #0d9488;
+  --color-bmkg-700: #0f766e;
+  --color-bmkg-800: #115e59;
+  --color-bmkg-900: #134e4a;
+  --color-bmkg-950: #042f2e;
+
+  /* Font Default */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-slate-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-300);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-400);
+}
+
+/* Fix React Datepicker di Tailwind v4 */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-slate-200);
+  outline: none;
+  color: var(--color-slate-800);
+  transition: all 0.2s;
+}
+.react-datepicker__input-container input:focus {
+  border-color: var(--color-bmkg-500);
+  box-shadow: 0 0 0 3px var(--color-bmkg-100);
+}
