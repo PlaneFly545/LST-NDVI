@@ -1,19 +1,42 @@
 // components/Map.js
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
 
-// Helper untuk update layer saat props berubah
+// Helper: Update layer gambar dari GEE
 function TileLayerUpdater({ url }) {
   const map = useMap();
-  // Bisa tambah logika zoom ke area tertentu di sini
   return url ? <TileLayer url={url} attribution="Google Earth Engine" /> : null;
 }
 
-const Map = ({ mapUrl }) => {
+// Helper: Auto-Focus kamera ke wilayah terpilih
+function MapFocus({ geoJson }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (geoJson) {
+      // Buat layer Leaflet dari GeoJSON untuk hitung batas (bounds)
+      const layer = L.geoJSON(geoJson);
+      const bounds = layer.getBounds();
+      
+      // Terbang ke area tersebut dengan animasi halus
+      if (bounds.isValid()) {
+         map.flyToBounds(bounds, {
+           padding: [50, 50],
+           duration: 1.5 // Durasi animasi terbang (detik)
+         });
+      }
+    }
+  }, [geoJson, map]);
+
+  return null;
+}
+
+const Map = ({ mapUrl, selectedGeoJson }) => {
   return (
     <MapContainer 
-      center={[-8.409518, 115.188919]} // Koordinat Tengah Bali
+      center={[-8.409518, 115.188919]} // Default Bali
       zoom={9} 
       style={{ height: "100%", width: "100%" }}
     >
@@ -21,7 +44,11 @@ const Map = ({ mapUrl }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; OpenStreetMap contributors'
       />
-      {/* Layer Hasil Analisis GEE */}
+      
+      {/* Logic Auto Focus */}
+      {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
+      
+      {/* Layer GEE */}
       {mapUrl && <TileLayerUpdater url={mapUrl} />}
     </MapContainer>
   );

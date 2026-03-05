@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import DatePicker from "react-datepicker";
@@ -7,11 +7,11 @@ import {
   Map as MapIcon, Calendar, Layers, BarChart3, 
   Leaf, ThermometerSun, Activity, Menu, Download, 
   Sliders, ChevronDown, FileDown, AlertTriangle,
-  ScatterChart as ScatterIcon, TrendingUp // Icon baru
+  ScatterChart as ScatterIcon, TrendingUp, Search, Eye, MapPin, CloudSun
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ScatterChart, Scatter, ZAxis // Import Chart Baru
+  ScatterChart, Scatter, ZAxis 
 } from 'recharts';
 import { Toaster, toast } from 'sonner';
 import { saveAs } from 'file-saver';
@@ -22,7 +22,7 @@ const MapWithNoSSR = dynamic(() => import('../components/Map'), {
   loading: () => (
     <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-slate-50">
       <div className="w-10 h-10 mb-4 border-4 rounded-full border-slate-200 border-t-bmkg-500 animate-spin"></div>
-      <p className="text-sm font-medium">Memuat Citra Landsat...</p>
+      <p className="text-sm font-medium">Menghubungkan ke Satelit...</p>
     </div>
   )
 });
@@ -51,31 +51,82 @@ const MapLegend = ({ type, min, max }) => {
 };
 
 export default function Home() {
-  const [startDate, setStartDate] = useState(new Date('2024-01-01'));
-  const [endDate, setEndDate] = useState(new Date('2024-12-31'));
+  const today = new Date();
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  const [startDate, setStartDate] = useState(oneYearAgo);
+  const [endDate, setEndDate] = useState(today);
   const [region, setRegion] = useState('DENPASAR');
   const [layerType, setLayerType] = useState('lst');
   
-  const [cloudCover, setCloudCover] = useState(20);
+  const [selectedGeoJson, setSelectedGeoJson] = useState(null);
+
+  const [cloudCover, setCloudCover] = useState(30); 
+  const [debouncedCloudCover, setDebouncedCloudCover] = useState(30); 
+
   const [reducer, setReducer] = useState('Median');
   const [visMin, setVisMin] = useState(20);
   const [visMax, setVisMax] = useState(45);
   const [threshold, setThreshold] = useState(30); 
   const [showAdvanced, setShowAdvanced] = useState(false); 
 
-  // --- STATE DATA ---
   const [mapUrl, setMapUrl] = useState(null);
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [scatterData, setScatterData] = useState([]); // Data Korelasi
+  const [scatterData, setScatterData] = useState([]); 
   const [tiffUrl, setTiffUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   
-  // Toggle Grafik: 'trend' (Time Series) atau 'scatter' (Korelasi)
+  const [analysisMode, setAnalysisMode] = useState('realtime'); 
   const [chartMode, setChartMode] = useState('trend'); 
 
   const regions = baliData.features.map(f => f.properties.nm_kabkota).sort();
+
+  // Debounce Slider
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCloudCover(cloudCover);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [cloudCover]);
+
+  const resetData = () => {
+    setMapUrl(null);
+    setStats(null);
+    setChartData([]);
+    setScatterData([]);
+    setTiffUrl(null);
+  };
+
+  const handleSwitchMode = (mode) => {
+    if (mode !== analysisMode) {
+      setAnalysisMode(mode);
+      resetData(); 
+    }
+  };
+
+  useEffect(() => {
+    if (analysisMode === 'realtime') {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisMode, layerType, region, debouncedCloudCover]); 
+
+  const handleRegionChange = (e) => {
+    const newRegion = e.target.value;
+    setRegion(newRegion);
+    const feature = baliData.features.find(f => f.properties.nm_kabkota === newRegion);
+    if (feature) {
+      setSelectedGeoJson(feature);
+    }
+  };
+  
+  useEffect(() => {
+      const feature = baliData.features.find(f => f.properties.nm_kabkota === 'DENPASAR');
+      if (feature) setSelectedGeoJson(feature);
+  }, []);
 
   const handleTypeChange = (type) => {
     setLayerType(type);
@@ -88,20 +139,25 @@ export default function Home() {
     }
   };
 
-  const handleProcess = async (e) => {
-    if (e) e.preventDefault(); 
+  const fetchData = async () => {
     setLoading(true);
     toast.dismiss(); 
     setTiffUrl(null);
-    const toastId = toast.loading('Mengolah data Spatio-Temporal...');
+    
+    const loadingMsg = analysisMode === 'realtime' 
+      ? `Mencari data terbaru (${region})...` 
+      : 'Mengolah data historis...';
+      
+    const toastId = toast.loading(loadingMsg);
     
     try {
       const params = new URLSearchParams({
+        mode: analysisMode,
         type: layerType,
         region_name: region,
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
-        cloud_cover: cloudCover,
+        cloud_cover: debouncedCloudCover,
         reducer: reducer,
         vis_min: visMin,
         vis_max: visMax,
@@ -109,16 +165,20 @@ export default function Home() {
       });
 
       const res = await fetch(`/api/map-layer?${params}`);
-      if (!res.ok) throw new Error("Gagal mengambil data API");
+      if (!res.ok) throw new Error("Gagal mengambil data Satelit");
       
       const data = await res.json();
       setMapUrl(data.map.urlFormat);
       setStats(data.stats);
       setChartData(data.chart);
-      setScatterData(data.scatter); // Simpan data scatter
+      setScatterData(data.scatter); 
       if (data.downloadUrl) setTiffUrl(data.downloadUrl);
 
-      toast.success('Analisis Selesai!', { id: toastId });
+      if (analysisMode === 'realtime' && !data.stats.image_date) {
+        toast.warning('Data tidak ditemukan. Coba perbesar toleransi awan.', { id: toastId });
+      } else {
+        toast.success(analysisMode === 'realtime' ? 'Data Berhasil Dimuat' : 'Analisis Selesai!', { id: toastId });
+      }
 
     } catch (error) {
       console.error(error);
@@ -127,12 +187,23 @@ export default function Home() {
     setLoading(false);
   };
 
+  const handleProcessHistory = (e) => {
+    if (e) e.preventDefault();
+    fetchData();
+  };
+
   const handleDownloadCSV = () => {
     if (!chartData.length) return toast.error("Tidak ada data.");
     const header = "Tanggal,Nilai\n";
     const csvContent = chartData.map(r => `${r.date},${r.value}`).join("\n");
     saveAs(new Blob([header + csvContent], { type: "text/csv" }), `Landsat_${layerType}_${region}.csv`);
     toast.success("CSV berhasil diunduh");
+  };
+
+  const formatDateIndo = (date) => {
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    });
   };
 
   return (
@@ -159,10 +230,29 @@ export default function Home() {
         <aside className={`flex flex-col bg-white transition-all duration-300 border-r border-slate-200 ${isSidebarOpen ? 'w-112.5' : 'w-0 border-none overflow-hidden'}`}>
           <div className="flex flex-col flex-1 p-5 overflow-y-auto gap-5">
             
-            {/* Input Section (Sama seperti sebelumnya) */}
+            {/* MODE SWITCHER */}
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Activity size={14}/> Mode Dashboard</label>
+              <div className="flex bg-slate-100 p-1 rounded-lg shadow-inner">
+                <button 
+                  onClick={() => handleSwitchMode('realtime')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'realtime' ? 'bg-white text-bmkg-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Eye size={14} className={analysisMode === 'realtime' ? 'animate-pulse' : ''}/> Monitoring (NTR)
+                </button>
+                <button 
+                  onClick={() => handleSwitchMode('history')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white text-bmkg-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Calendar size={14}/> Studi Historis
+                </button>
+              </div>
+            </div>
+
+            {/* PARAMETER & WILAYAH */}
             <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Layers size={14}/> Parameter</label>
+               <div>
+                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Layers size={14}/> Parameter Pantauan</label>
                 <div className="flex gap-2">
                   {['lst', 'ndvi'].map((type) => (
                     <button
@@ -173,22 +263,35 @@ export default function Home() {
                         ${layerType === type ? 'bg-bmkg-50 border-bmkg-500 text-bmkg-700 ring-1 ring-bmkg-500' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
                     >
                       {type === 'lst' ? <ThermometerSun size={16}/> : <Leaf size={16}/>}
-                      {type === 'lst' ? 'Suhu (LST)' : 'Vegetasi (NDVI)'}
+                      {type === 'lst' ? 'Suhu (LST)' : 'Vegetasi'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Wilayah Studi</label>
-                  <div className="relative">
-                    <select value={region} onChange={(e) => setRegion(e.target.value)} className="w-full p-2.5 text-sm bg-white border rounded-md border-slate-300 outline-none focus:border-bmkg-500 appearance-none cursor-pointer">
-                      {regions.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                    <ChevronDown size={16} className="absolute right-3 top-3 text-slate-400 pointer-events-none"/>
-                  </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><MapPin size={10}/> Wilayah Studi</label>
+                <div className="relative">
+                  <select value={region} onChange={handleRegionChange} className="w-full p-2.5 text-sm bg-white border rounded-md border-slate-300 outline-none focus:border-bmkg-500 appearance-none cursor-pointer">
+                    {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-3 text-slate-400 pointer-events-none"/>
                 </div>
+              </div>
+              
+              {/* SLIDER TOLERANSI AWAN (MUNCUL DI KEDUA MODE SEKARANG) */}
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                <div className="flex justify-between text-xs mb-2">
+                  <span className="text-slate-500 font-medium flex items-center gap-1"><CloudSun size={12}/> Toleransi Awan</span>
+                  <span className="font-bold text-bmkg-700">{cloudCover}%</span>
+                </div>
+                <input type="range" min="0" max="100" value={cloudCover} onChange={(e) => setCloudCover(e.target.value)} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-bmkg-600"/>
+              </div>
+            </div>
+
+            {/* KONTEN HISTORIS */}
+            {analysisMode === 'history' && (
+              <div className="animate-in fade-in duration-300 space-y-4 border-t border-slate-100 pt-4">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Mulai</label>
@@ -199,56 +302,68 @@ export default function Home() {
                     <DatePicker selected={endDate} onChange={setEndDate} className="w-full p-2 text-sm border rounded-md border-slate-300 outline-none focus:border-bmkg-500 cursor-pointer" dateFormat="dd/MM/yyyy" minDate={startDate}/>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Advanced Config */}
-            <div className="border border-slate-200 rounded-lg bg-slate-50/50">
-              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
-                <div className="flex items-center gap-2"><Sliders size={14}/> Konfigurasi Analisis</div>
-                <span className={`transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}><ChevronDown size={14}/></span>
-              </button>
-              
-              {showAdvanced && (
-                <div className="p-4 bg-white space-y-4 border-t border-slate-200">
-                  <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                    <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
-                      <AlertTriangle size={12}/> Ambang Batas Dampak ({layerType === 'lst' ? '> °C' : '> Index'})
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" step="0.1" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full p-2 text-sm border border-red-200 rounded focus:border-red-500 outline-none"/>
-                      <span className="text-xs font-medium text-red-400 whitespace-nowrap">{layerType === 'lst' ? 'Derajat' : 'Index'}</span>
+                <div className="border border-slate-200 rounded-lg bg-slate-50/50">
+                  <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-2"><Sliders size={14}/> Konfigurasi Lanjut</div>
+                    <span className={`transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}><ChevronDown size={14}/></span>
+                  </button>
+                  
+                  {showAdvanced && (
+                    <div className="p-4 bg-white space-y-4 border-t border-slate-200">
+                      <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                        <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
+                          <AlertTriangle size={12}/> Ambang Batas
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input type="number" step="0.1" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full p-2 text-sm border border-red-200 rounded focus:border-red-500 outline-none"/>
+                          <span className="text-xs font-medium text-red-400 whitespace-nowrap">{layerType === 'lst' ? 'Derajat' : 'Index'}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-slate-500">Toleransi Awan</span>
-                      <span className="font-bold text-bmkg-700">{cloudCover}%</span>
-                    </div>
-                    <input type="range" min="0" max="100" value={cloudCover} onChange={(e) => setCloudCover(e.target.value)} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-bmkg-600"/>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Min Visual</label>
-                      <input type="number" value={visMin} onChange={(e) => setVisMin(e.target.value)} className="w-full p-2 text-xs border rounded bg-slate-50 outline-none"/>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Max Visual</label>
-                      <input type="number" value={visMax} onChange={(e) => setVisMax(e.target.value)} className="w-full p-2 text-xs border rounded bg-slate-50 outline-none"/>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 text-sm font-bold text-white shadow-lg rounded-xl bg-bmkg-700 hover:bg-bmkg-800 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer transition-all active:scale-[0.98]">
-              {loading ? <span className="animate-spin">⟳</span> : <Activity size={18}/>} Analisis Sekarang
-            </button>
+                <button 
+                  type="button" 
+                  onClick={handleProcessHistory} 
+                  disabled={loading} 
+                  className="w-full py-3 text-sm font-bold text-white shadow-lg rounded-xl bg-bmkg-700 hover:bg-bmkg-800 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  {loading ? <span className="animate-spin">⟳</span> : <Activity size={18}/>} Analisis Data Historis
+                </button>
+              </div>
+            )}
+            
+            {/* Info Realtime */}
+            {analysisMode === 'realtime' && (
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 flex gap-2 items-start mt-2">
+                <Eye size={16} className="shrink-0 mt-0.5"/>
+                <p>Menampilkan mosaik <b>data terbaru</b> yang tersedia untuk <b>{region}</b> (gap-filling aktif).</p>
+              </div>
+            )}
 
-            {/* HASIL & VISUALISASI */}
+            {/* HASIL */}
             {stats && (
               <div className="mt-2 pt-6 border-t border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                
+                <div className={`mb-3 p-3 border rounded-lg flex items-center justify-between shadow-sm ${analysisMode === 'realtime' ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                  <div>
+                    <span className={`text-[10px] font-bold uppercase ${analysisMode === 'realtime' ? 'text-blue-600' : 'text-slate-500'}`}>
+                      {analysisMode === 'realtime' ? 'Tanggal Data Utama' : 'Periode Analisis'}
+                    </span>
+                    <div className={`text-sm font-bold ${analysisMode === 'realtime' ? 'text-blue-800' : 'text-slate-700'}`}>
+                      {analysisMode === 'realtime' ? (
+                        stats.image_date || 'Data Tidak Ditemukan'
+                      ) : (
+                        `${formatDateIndo(startDate)} - ${formatDateIndo(endDate)}`
+                      )}
+                    </div>
+                  </div>
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center ${analysisMode === 'realtime' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                    <Calendar size={16}/>
+                  </div>
+                </div>
+
                 {/* Score Card Luas Dampak */}
                 <div className="mb-4 p-4 bg-linear-to-br from-red-50 to-white border border-red-100 rounded-xl shadow-sm">
                   <div className="flex justify-between items-start">
@@ -271,7 +386,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* --- TAB MENU GRAFIK (FITUR BARU) --- */}
+                {/* TAB GRAFIK */}
                 <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1 rounded-lg">
                   <button 
                     type="button"
@@ -289,11 +404,10 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* AREA CHART DINAMIS */}
+                {/* CHART AREA */}
                 <div className="h-56 w-full bg-white rounded-lg border border-slate-100 p-2 relative">
                   <ResponsiveContainer>
                     {chartMode === 'trend' ? (
-                      // 1. Grafik Time Series (Lama)
                       <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
                         <XAxis dataKey="date" hide/>
@@ -302,7 +416,6 @@ export default function Home() {
                         <Line type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={2} dot={false}/>
                       </LineChart>
                     ) : (
-                      // 2. Grafik Scatter Plot (BARU - Prioritas 2)
                       <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis 
@@ -320,18 +433,10 @@ export default function Home() {
                       </ScatterChart>
                     )}
                   </ResponsiveContainer>
-                  
-                  {/* Legend / Info Grafik */}
-                  <p className="text-[10px] text-center text-slate-400 mt-1">
-                    {chartMode === 'trend' 
-                      ? "Fluktuasi nilai rata-rata per tanggal pengambilan citra" 
-                      : "Distribusi 300 titik sampel acak (Hubungan Suhu & Vegetasi)"}
-                  </p>
                 </div>
-
-                {/* Footer Actions */}
+                
                 <div className="flex justify-end gap-2 mt-3">
-                  <button type="button" onClick={handleDownloadCSV} className="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded flex items-center gap-1 hover:bg-slate-200 cursor-pointer border border-slate-200">
+                   <button type="button" onClick={handleDownloadCSV} className="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded flex items-center gap-1 hover:bg-slate-200 cursor-pointer border border-slate-200">
                     <Download size={12}/> Unduh CSV
                   </button>
                   {tiffUrl && (
@@ -340,14 +445,13 @@ export default function Home() {
                     </a>
                   )}
                 </div>
-
               </div>
             )}
           </div>
         </aside>
-
+        
         <div className="relative flex-1 bg-slate-200">
-          <MapWithNoSSR mapUrl={mapUrl} selectedRegion={region} />
+          <MapWithNoSSR mapUrl={mapUrl} selectedGeoJson={selectedGeoJson} />
           {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
         </div>
       </main>
