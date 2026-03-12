@@ -6,11 +6,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import {
   Leaf, ThermometerSun, Activity, Menu, Download,
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
-  TrendingUp, History
+  TrendingUp, History, Square, Columns, Info
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ScatterChart, Scatter
+  ScatterChart, Scatter, ReferenceLine
 } from 'recharts';
 import { Toaster, toast } from 'sonner';
 import { saveAs } from 'file-saver';
@@ -54,8 +54,16 @@ export default function Home() {
   const tenYearsAgo = new Date();
   tenYearsAgo.setFullYear(today.getFullYear() - 10);
 
+  // State Visual Mode
+  const [visualMode, setVisualMode] = useState('tunggal');
+
   const [startDate, setStartDate] = useState(tenYearsAgo);
   const [endDate, setEndDate] = useState(today);
+
+  // State Tanggal untuk Peta Kanan (Mode Split)
+  const [startDateRight, setStartDateRight] = useState(new Date('2020-01-01'));
+  const [endDateRight, setEndDateRight] = useState(today);
+
   const [region, setRegion] = useState('SELURUH BALI');
   const [layerType, setLayerType] = useState('lst');
   const [selectedGeoJson, setSelectedGeoJson] = useState(baliData);
@@ -69,9 +77,19 @@ export default function Home() {
   const [threshold, setThreshold] = useState(30);
 
   const [mapUrl, setMapUrl] = useState(null);
+  const [mapUrlRight, setMapUrlRight] = useState(null);
+
   const [stats, setStats] = useState(null);
+  const [statsRight, setStatsRight] = useState(null);
+
+  // State Grafik (Dukungan untuk Split Mode)
   const [chartData, setChartData] = useState([]);
   const [scatterData, setScatterData] = useState([]);
+  const [chartDataRight, setChartDataRight] = useState([]);
+  const [scatterDataRight, setScatterDataRight] = useState([]);
+
+  const [activeSplitSide, setActiveSplitSide] = useState('left'); // 'left' | 'right'
+
   const [tiffUrl, setTiffUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -85,7 +103,6 @@ export default function Home() {
   const regions = ['SELURUH BALI', ...baliData.features.map(f => f.properties.nm_kabkota).sort()];
   const predictionOffsets = [1, 3, 5, 10];
 
-  // Batas minimum data Landsat 8 (1 Januari 2013)
   const landsatMinDate = new Date('2013-01-01');
 
   useEffect(() => {
@@ -97,17 +114,32 @@ export default function Home() {
 
   const resetData = () => {
     setMapUrl(null);
+    setMapUrlRight(null);
     setStats(null);
+    setStatsRight(null);
     setChartData([]);
     setScatterData([]);
+    setChartDataRight([]);
+    setScatterDataRight([]);
     setTiffUrl(null);
+    setActiveSplitSide('left');
   };
 
   const handleSwitchMode = (mode) => {
     if (mode !== analysisMode) {
       setAnalysisMode(mode);
+      if (mode === 'prediksi') {
+        setChartMode('trend');
+        setVisualMode('tunggal');
+      }
       resetData();
-      if (mode === 'prediksi') setChartMode('trend');
+    }
+  };
+
+  const handleVisualModeChange = (mode) => {
+    if (mode !== visualMode) {
+      setVisualMode(mode);
+      resetData();
     }
   };
 
@@ -138,37 +170,76 @@ export default function Home() {
     toast.dismiss();
     setTiffUrl(null);
 
-    const loadingMsg = analysisMode === 'history'
-      ? 'Memproses data historis...'
-      : 'Menghitung pemodelan linear...';
+    const loadingMsg = visualMode === 'split'
+      ? 'Memproses dua peta historis...'
+      : (analysisMode === 'history' ? 'Memproses data historis...' : 'Menghitung pemodelan linear...');
 
     const toastId = toast.loading(loadingMsg);
 
     try {
       const regionParam = region === 'SELURUH BALI' ? 'ALL' : region;
-      const params = new URLSearchParams({
-        mode: analysisMode,
-        type: layerType,
-        region_name: regionParam,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        cloud_cover: debouncedCloudCover,
-        reducer: reducer,
-        vis_min: visMin,
-        vis_max: visMax,
-        threshold: threshold,
-        target_year: targetYear
-      });
 
-      const res = await fetch(`/api/map-layer?${params}`);
-      if (!res.ok) throw new Error("Gagal mengambil data Satelit");
+      if (visualMode === 'split') {
+        const paramsLeft = new URLSearchParams({
+          mode: 'history', type: layerType, region_name: regionParam,
+          start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0],
+          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold
+        });
 
-      const data = await res.json();
-      setMapUrl(data.map.urlFormat);
-      setStats(data.stats);
-      setChartData(data.chart);
-      setScatterData(data.scatter);
-      if (data.downloadUrl) setTiffUrl(data.downloadUrl);
+        const paramsRight = new URLSearchParams({
+          mode: 'history', type: layerType, region_name: regionParam,
+          start_date: startDateRight.toISOString().split('T')[0], end_date: endDateRight.toISOString().split('T')[0],
+          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold
+        });
+
+        const [resLeft, resRight] = await Promise.all([
+          fetch(`/api/map-layer?${paramsLeft}`),
+          fetch(`/api/map-layer?${paramsRight}`)
+        ]);
+
+        if (!resLeft.ok || !resRight.ok) throw new Error("Gagal mengambil data Satelit");
+
+        const dataLeft = await resLeft.json();
+        const dataRight = await resRight.json();
+
+        setMapUrl(dataLeft.map.urlFormat);
+        setMapUrlRight(dataRight.map.urlFormat);
+
+        setStats(dataLeft.stats);
+        setStatsRight(dataRight.stats);
+
+        // Simpan data grafik untuk kedua sisi
+        setChartData(dataLeft.chart || []);
+        setScatterData(dataLeft.scatter || []);
+        setChartDataRight(dataRight.chart || []);
+        setScatterDataRight(dataRight.scatter || []);
+        setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
+
+      } else {
+        const params = new URLSearchParams({
+          mode: analysisMode,
+          type: layerType,
+          region_name: regionParam,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          cloud_cover: debouncedCloudCover,
+          reducer: reducer,
+          vis_min: visMin,
+          vis_max: visMax,
+          threshold: threshold,
+          target_year: targetYear
+        });
+
+        const res = await fetch(`/api/map-layer?${params}`);
+        if (!res.ok) throw new Error("Gagal mengambil data Satelit");
+
+        const data = await res.json();
+        setMapUrl(data.map.urlFormat);
+        setStats(data.stats);
+        setChartData(data.chart);
+        setScatterData(data.scatter);
+        if (data.downloadUrl) setTiffUrl(data.downloadUrl);
+      }
 
       toast.success('Pemrosesan Selesai', { id: toastId });
 
@@ -184,20 +255,85 @@ export default function Home() {
     fetchData();
   };
 
-  const renderChartData = () => {
-    if (stats?.is_prediction && chartData.length > 0) {
-      return [...chartData, { date: `${stats.target_year}-01-01`, value: stats.mean, isPred: true }];
+  // Kalkulasi Tren Regresi Linear yang dinamis menerima data apa saja (kiri atau kanan)
+  const getTrendLineData = (dataArray) => {
+    if (!dataArray || dataArray.length < 2) return null;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    const n = dataArray.length;
+
+    dataArray.forEach(p => {
+      sumX += p.ndvi;
+      sumY += p.lst;
+      sumXY += p.ndvi * p.lst;
+      sumXX += p.ndvi * p.ndvi;
+    });
+
+    const denominator = (n * sumXX - sumX * sumX);
+    if (denominator === 0) return null;
+
+    const m = (n * sumXY - sumX * sumY) / denominator;
+    const c = (sumY - m * sumX) / n;
+
+    return {
+      segment: [
+        { x: -1, y: m * (-1) + c },
+        { x: 1, y: m * 1 + c }
+      ],
+      slope: m
+    };
+  };
+
+  // Helper untuk menyiapkan data tampilan grafik (menangani overlay prediksi jika ada)
+  const getDisplayChartData = (cData, currentStats) => {
+    if (currentStats?.is_prediction && cData.length > 0) {
+      return [...cData, { date: `${currentStats.target_year}-01-01`, value: currentStats.mean, isPred: true }];
     }
-    return chartData;
+    return cData;
+  };
+
+  // Generator Teks Interpretasi
+  const renderChartSummary = (cMode, cData, sData, currentStats, tData) => {
+    if (cMode === 'trend' && cData.length > 1) {
+      const histData = cData.filter(d => !d.isPred);
+      if (histData.length < 2) return "Data rentang waktu tidak cukup panjang untuk membentuk kesimpulan tren yang valid.";
+
+      const first = histData[0];
+      const last = histData[histData.length - 1];
+      const diff = last.value - first.value;
+      const paramName = layerType === 'lst' ? 'Suhu Permukaan' : 'Indeks Vegetasi';
+      const trendDir = diff > 0 ? 'peningkatan' : 'penurunan';
+      const sifatTrend = layerType === 'lst'
+        ? (diff > 0 ? 'yang berpotensi mengindikasikan pemanasan lokal' : 'menunjukkan pendinginan wilayah')
+        : (diff > 0 ? 'mengindikasikan penghijauan area' : 'mengindikasikan pengurangan tutupan lahan hijau');
+
+      let text = `Secara historis dari ${first.date.substring(0, 4)} hingga ${last.date.substring(0, 4)}, ${paramName} mengalami tren ${trendDir} kumulatif sebesar ${Math.abs(diff).toFixed(2)} ${currentStats?.unit}, ${sifatTrend}.`;
+
+      if (currentStats?.is_prediction) {
+        const predDiff = currentStats.mean - last.value;
+        const predDir = predDiff > 0 ? 'naik' : 'turun';
+        text += ` Jika pola ini dipertahankan, proyeksi memprediksi nilai rata-rata akan terus bergerak ${predDir} mencapai ${currentStats.mean.toFixed(2)} ${currentStats?.unit} pada tahun ${currentStats.target_year}.`;
+      }
+      return text;
+    }
+
+    if (cMode === 'scatter' && sData.length > 1 && tData) {
+      const { slope } = tData;
+      if (slope < -1) {
+        return "Terdapat Korelasi Negatif Kuat. Secara empiris terbukti bahwa titik dengan tutupan vegetasi lebat (NDVI mendekati 1) secara konsisten meredam panas, menghasilkan Suhu Permukaan (LST) yang jauh lebih dingin.";
+      } else if (slope < 0) {
+        return "Terdapat indikasi Korelasi Negatif. Area menunjukkan pola umum dimana semakin tinggi kerapatan hijau, semakin rendah Suhu Permukaan di sekitarnya.";
+      } else if (slope > 0) {
+        return "Terdeteksi Korelasi Positif. Secara teoritis ini adalah anomali (vegetasi tinggi seharusnya menurunkan suhu). Kondisi ini biasa terjadi jika ada intervensi awan ekstrem, atau kesalahan pembacaan sensor pada wilayah air.";
+      }
+    }
+    return "Sedang mengumpulkan sampel data untuk diinterpretasikan...";
   };
 
   const renderKPIs = () => {
     if (!stats) return null;
-
     if (stats.is_prediction) {
       const delta = stats.mean - stats.baseline_mean;
       const isWorse = layerType === 'lst' ? delta > 0 : delta < 0;
-
       return (
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
@@ -246,9 +382,84 @@ export default function Home() {
     }
   };
 
+  // Komponen Helper untuk menyatukan render Grafik
+  const renderChartSection = () => {
+    const isSplit = visualMode === 'split';
+
+    // Tentukan data mana yang akan dirender berdasarkan mode dan sisi aktif
+    const activeCData = isSplit ? (activeSplitSide === 'left' ? chartData : chartDataRight) : chartData;
+    const activeSData = isSplit ? (activeSplitSide === 'left' ? scatterData : scatterDataRight) : scatterData;
+    const activeStats = isSplit ? (activeSplitSide === 'left' ? stats : statsRight) : stats;
+
+    const trendData = getTrendLineData(activeSData);
+    const displayChartData = getDisplayChartData(activeCData, activeStats);
+
+    return (
+      <div className="mt-6 pt-6 border-t border-slate-100">
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grafik Analitik</label>
+          {isSplit && (
+            <div className="flex bg-slate-200 p-0.5 rounded-md">
+              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Peta Kiri</button>
+              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Peta Kanan</button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1.5 rounded-lg">
+          <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <TrendingUp size={16} /> Tren Waktu
+          </button>
+          <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
+            <ScatterIcon size={16} /> Korelasi
+          </button>
+        </div>
+
+        <div className="h-56 w-full relative">
+          <ResponsiveContainer>
+            {chartMode === 'trend' ? (
+              <LineChart data={displayChartData} margin={{ top: 10, right: 10, bottom: 5, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                <XAxis dataKey="date" hide />
+                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                  labelFormatter={(label) => activeStats?.is_prediction && label.startsWith(activeStats.target_year) ? `Tahun ${activeStats.target_year} (Proyeksi)` : label}
+                />
+                <Line type="monotone" dataKey="value" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
+                {activeStats?.is_prediction && (
+                  <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                )}
+              </LineChart>
+            ) : (
+              <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+                <XAxis type="number" dataKey="ndvi" name="NDVI" domain={[-1, 1]} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} label={{ value: 'NDVI (Vegetasi)', position: 'insideBottom', offset: -5, fontSize: 11, fill: '#64748b' }} />
+                <YAxis type="number" dataKey="lst" name="LST" unit="°C" domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} label={{ value: 'LST (°C)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#64748b' }} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                <Scatter name="Sampel Korelasi" data={activeSData} fill={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} opacity={0.6} line={false} shape="circle" />
+
+                {trendData?.segment && (
+                  <ReferenceLine segment={trendData.segment} stroke="#f43f5e" strokeWidth={2} strokeDasharray="4 4" ifOverflow="hidden" />
+                )}
+              </ScatterChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+
+        <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] flex items-start gap-3">
+          <Info size={18} className="text-slate-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-slate-700 leading-relaxed font-medium">
+            {renderChartSummary(chartMode, activeCData, activeSData, activeStats, trendData)}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans bg-slate-50 text-slate-800 selection:bg-slate-200">
-      <Head><title>Spatio-Temporal Analysis</title></Head>
+      <Head><title>Spatio-Temporal Analysis Engine</title></Head>
       <Toaster position="top-center" />
 
       <nav className="flex items-center justify-between px-6 bg-white border-b h-16 border-slate-200 z-50">
@@ -266,14 +477,28 @@ export default function Home() {
           <div className="flex flex-col flex-1 p-6 overflow-y-auto">
 
             {/* Mode Analisis */}
-            <div className="flex bg-slate-100 p-1.5 rounded-lg mb-6">
+            <div className="flex bg-slate-100 p-1.5 rounded-lg mb-4">
               <button onClick={() => handleSwitchMode('history')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
                 <History size={16} /> Historis
               </button>
-              <button onClick={() => handleSwitchMode('prediksi')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => handleSwitchMode('prediksi')} disabled={visualMode === 'split'} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'}`}>
                 <TrendingUp size={16} /> Prediksi
               </button>
             </div>
+
+            {/* Mode Visualisasi Layar (Tampil saat Historis) */}
+            {analysisMode === 'history' && (
+              <div className="mb-6">
+                <div className="flex bg-slate-100 p-1.5 rounded-lg">
+                  <button onClick={() => handleVisualModeChange('tunggal')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'tunggal' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Square size={16} /> Tunggal
+                  </button>
+                  <button onClick={() => handleVisualModeChange('split')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'split' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Columns size={16} /> Komparasi (Split)
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-6">
               {/* Konfigurasi Dasar */}
@@ -298,34 +523,25 @@ export default function Home() {
 
                 <div className="mb-4">
                   <span className="text-sm font-medium text-slate-600 mb-2 block">
-                    {analysisMode === 'prediksi' ? 'Data Historis (Baseline Pembelajaran)' : 'Rentang Tanggal Analisis'}
+                    {visualMode === 'split' ? 'Periode Historis (Kiri)' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline Pembelajaran)' : 'Rentang Tanggal Analisis')}
                   </span>
                   <div className="flex items-center gap-2">
-                    <DatePicker
-                      selected={startDate}
-                      onChange={setStartDate}
-                      minDate={landsatMinDate}
-                      maxDate={new Date()}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center"
-                      dateFormat="dd/MM/yyyy"
-                    />
+                    <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
                     <span className="text-slate-400">-</span>
-                    <DatePicker
-                      selected={endDate}
-                      onChange={setEndDate}
-                      minDate={startDate}
-                      maxDate={new Date()}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center"
-                      dateFormat="dd/MM/yyyy"
-                    />
+                    <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
                   </div>
                 </div>
+
+                {visualMode === 'split' && (
+                  <div className="mb-4">
+                    <span className="text-sm font-medium text-slate-600 mb-2 block">Periode Historis (Kanan)</span>
+                    <div className="flex items-center gap-2">
+                      <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
+                      <span className="text-slate-400">-</span>
+                      <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-2">
                   <span className="text-sm font-medium text-slate-600 mb-2 block">Area Tinjauan</span>
@@ -372,66 +588,78 @@ export default function Home() {
 
               <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 mt-2 text-sm font-bold text-white transition-all rounded-lg bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]">
                 {loading ? <span className="animate-spin">⟳</span> : <Activity size={18} />}
-                {analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data'}
+                {visualMode === 'split' ? 'Proses Komparasi Peta' : (analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data')}
               </button>
             </div>
 
             {/* HASIL / OUTPUT */}
             {stats && (
               <div className="mt-8 pt-6 border-t border-slate-100 animate-in fade-in duration-500">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Ringkasan Analitik</label>
+                {visualMode === 'split' ? (
+                  <>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Komparasi Statistik</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Blok Statistik Kiri */}
+                      <div className="flex flex-col gap-2">
+                        <div className="text-[11px] font-bold text-slate-500 bg-slate-100 p-1.5 rounded text-center tracking-wider">PERIODE KIRI</div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
+                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase">Rata-rata</span>
+                          <span className="text-lg font-bold text-slate-800">{stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{stats.unit}</span></span>
+                        </div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
+                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
+                          <span className="text-lg font-bold text-slate-800">{stats.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-500">Ha</span></span>
+                        </div>
+                      </div>
 
-                {renderKPIs()}
+                      {/* Blok Statistik Kanan */}
+                      <div className="flex flex-col gap-2">
+                        <div className="text-[11px] font-bold text-slate-500 bg-slate-100 p-1.5 rounded text-center tracking-wider">PERIODE KANAN</div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
+                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase">Rata-rata</span>
+                          <span className="text-lg font-bold text-slate-800">{statsRight.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{statsRight.unit}</span></span>
+                        </div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
+                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
+                          <span className="text-lg font-bold text-slate-800">{statsRight.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-500">Ha</span></span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-2 mt-6 mb-3 bg-slate-100 p-1.5 rounded-lg">
-                  <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                    <TrendingUp size={16} /> Tren Waktu
-                  </button>
-                  <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
-                    <ScatterIcon size={16} /> Korelasi
-                  </button>
-                </div>
+                    {/* Blok Kesimpulan / Selisih */}
+                    <div className="mt-4 p-4 bg-slate-800 text-white rounded-xl shadow-md relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-2 block">Perubahan (Kanan - Kiri)</span>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <span className="text-xs text-slate-400 block mb-0.5">Selisih Rata-rata</span>
+                          <span className={`text-xl font-bold leading-none ${(statsRight.mean - stats.mean) > 0 ? (layerType === 'lst' ? 'text-rose-400' : 'text-emerald-400') : (layerType === 'lst' ? 'text-emerald-400' : 'text-rose-400')}`}>
+                            {(statsRight.mean - stats.mean) > 0 ? '+' : ''}{(statsRight.mean - stats.mean).toFixed(2)} <span className="text-sm font-normal opacity-70">{stats.unit}</span>
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-slate-400 block mb-0.5">Area Terdampak Baru</span>
+                          <span className={`text-xl font-bold leading-none ${((statsRight.impact_area_ha || 0) - (stats.impact_area_ha || 0)) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {((statsRight.impact_area_ha || 0) - (stats.impact_area_ha || 0)) > 0 ? '+' : ''}{((statsRight.impact_area_ha || 0) - (stats.impact_area_ha || 0)).toLocaleString('id-ID', { maximumFractionDigits: 1 })} <span className="text-sm font-normal opacity-70">Ha</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Ringkasan Analitik</label>
+                    {renderKPIs()}
+                  </>
+                )}
 
-                <div className="h-56 w-full relative">
-                  <ResponsiveContainer>
-                    {chartMode === 'trend' ? (
-                      <LineChart data={renderChartData()} margin={{ top: 10, right: 10, bottom: 5, left: -20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
-                        <XAxis dataKey="date" hide />
-                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
-                        <Tooltip
-                          contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                          labelFormatter={(label) => stats?.is_prediction && label.startsWith(stats.target_year) ? `Tahun ${stats.target_year} (Proyeksi)` : label}
-                        />
-                        <Line type="monotone" dataKey="value" stroke="#334155" strokeWidth={2} dot={false} />
+                {/* MEMANGGIL BLOK GRAFIK (BERFUNGSI DI KEDUA MODE) */}
+                {renderChartSection()}
 
-                        {stats?.is_prediction && (
-                          <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                        )}
-                      </LineChart>
-                    ) : (
-                      <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
-                        <XAxis
-                          type="number" dataKey="ndvi" name="NDVI"
-                          domain={[-1, 1]} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false}
-                          label={{ value: 'NDVI (Vegetasi)', position: 'insideBottom', offset: -5, fontSize: 11, fill: '#64748b' }}
-                        />
-                        <YAxis
-                          type="number" dataKey="lst" name="LST" unit="°C"
-                          domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false}
-                          label={{ value: 'LST (°C)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#64748b' }}
-                        />
-                        <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
-                        <Scatter name="Sampel Korelasi" data={scatterData} fill="#334155" opacity={0.6} line={false} shape="circle" />
-                      </ScatterChart>
-                    )}
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-3">
-                  {tiffUrl && (
-                    <a href={tiffUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-slate-200 transition-colors no-underline">
+                {/* DOWNLOAD (HANYA MUNCUL DI MODE TUNGGAL) */}
+                <div className="flex justify-end gap-2 mt-4">
+                  {tiffUrl && visualMode !== 'split' && (
+                    <a href={tiffUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-slate-200 transition-colors no-underline cursor-pointer">
                       <Download size={14} /> GeoTIFF
                     </a>
                   )}
@@ -441,8 +669,8 @@ export default function Home() {
           </div>
         </aside>
 
-        <div className="relative flex-1 bg-slate-100">
-          <MapWithNoSSR mapUrl={mapUrl} selectedGeoJson={selectedGeoJson} />
+        <div className="relative flex-1 bg-slate-100 flex">
+          <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
           {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
         </div>
       </main>
