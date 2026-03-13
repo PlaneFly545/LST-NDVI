@@ -1,3 +1,4 @@
+// pages/index.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
@@ -100,6 +101,9 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
   const [targetYear, setTargetYear] = useState(currentYear + 5);
 
+  // BARU: State untuk metode Gap Filling
+  const [gapFill, setGapFill] = useState('none');
+
   const regions = ['SELURUH BALI', ...baliData.features.map(f => f.properties.nm_kabkota).sort()];
   const predictionOffsets = [1, 3, 5, 10];
 
@@ -183,13 +187,15 @@ export default function Home() {
         const paramsLeft = new URLSearchParams({
           mode: 'history', type: layerType, region_name: regionParam,
           start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0],
-          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold
+          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold,
+          gap_fill: gapFill // BARU: Parameter gap_fill
         });
 
         const paramsRight = new URLSearchParams({
           mode: 'history', type: layerType, region_name: regionParam,
           start_date: startDateRight.toISOString().split('T')[0], end_date: endDateRight.toISOString().split('T')[0],
-          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold
+          cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold,
+          gap_fill: gapFill // BARU: Parameter gap_fill
         });
 
         const [resLeft, resRight] = await Promise.all([
@@ -227,7 +233,8 @@ export default function Home() {
           vis_min: visMin,
           vis_max: visMax,
           threshold: threshold,
-          target_year: targetYear
+          target_year: targetYear,
+          gap_fill: gapFill // BARU: Parameter gap_fill
         });
 
         const res = await fetch(`/api/map-layer?${params}`);
@@ -481,7 +488,8 @@ export default function Home() {
               <button onClick={() => handleSwitchMode('history')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
                 <History size={16} /> Historis
               </button>
-              <button onClick={() => handleSwitchMode('prediksi')} disabled={visualMode === 'split'} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'}`}>
+              {/* PERBAIKAN: Atribut disabled dihapus agar user bisa langsung pindah ke prediksi kapan saja */}
+              <button onClick={() => handleSwitchMode('prediksi')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
                 <TrendingUp size={16} /> Prediksi
               </button>
             </div>
@@ -585,6 +593,33 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              {/* BARU: METODE GAP FILLING (Hanya tampil di mode Historis) */}
+              {analysisMode !== 'prediksi' && (
+                <div className="pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">3. Algoritma Pemrosesan Awan</label>
+                    <div className="group relative cursor-help">
+                      <Info size={14} className="text-slate-400 hover:text-slate-600 transition-colors" />
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-[10px] rounded-lg shadow-xl z-50 text-left leading-relaxed border border-slate-700">
+                        <span className="block font-bold text-slate-200 mb-1">Komposit Temporal (Bawaan):</span>
+                        <span className="text-slate-400 block mb-2">Reduksi statistik berbasis waktu (median/mean) pada kumpulan citra. Mempertahankan nilai fisis asli observasi tanpa interpolasi buatan.</span>
+
+                        <span className="block font-bold text-slate-200 mb-1">Interpolasi Spasial (Focal Mean):</span>
+                        <span className="text-slate-400 block">Menambal kekosongan piksel (gap-filling) akibat masking awan menggunakan nilai rata-rata piksel bertetangga. Ideal untuk kontinuitas kartografi.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    <button type="button" onClick={() => setGapFill('none')} className={`flex-1 py-2.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer uppercase tracking-wide ${gapFill === 'none' ? 'bg-slate-800 border-slate-800 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      Komposit Temporal
+                    </button>
+                    <button type="button" onClick={() => setGapFill('spatial')} className={`flex-1 py-2.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer uppercase tracking-wide ${gapFill === 'spatial' ? 'bg-slate-800 border-slate-800 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      Interpolasi Spasial
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 mt-2 text-sm font-bold text-white transition-all rounded-lg bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]">
                 {loading ? <span className="animate-spin">⟳</span> : <Activity size={18} />}

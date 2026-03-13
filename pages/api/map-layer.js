@@ -20,10 +20,11 @@ export default async function handler(req, res) {
   try {
     await authenticate();
 
+    // BARU: Menambahkan penangkapan parameter gap_fill dari request query
     const {
       type, start_date, end_date, region_name,
       cloud_cover, reducer, vis_min, vis_max, threshold,
-      mode, target_year
+      mode, target_year, gap_fill
     } = req.query;
 
     let geometry;
@@ -117,6 +118,19 @@ export default async function handler(req, res) {
 
     if (!finalImage) {
       throw new Error("Tidak ada data citra pada rentang waktu/wilayah tersebut.");
+    }
+
+    // BARU: Implementasi Gap Filling menggunakan Interpolasi Spasial (Focal Mean)
+    // Berlaku hanya jika user memilih metode 'spatial' dan BUKAN dalam mode prediksi
+    if (gap_fill === 'spatial' && mode !== 'prediksi') {
+      const gapFillRadius = 2;
+      const filledImage = finalImage.focal_mean({
+        radius: gapFillRadius,
+        kernelType: 'square',
+        units: 'pixels',
+        iterations: 2
+      });
+      finalImage = finalImage.unmask(filledImage);
     }
 
     finalImage = finalImage.clip(geometry);
