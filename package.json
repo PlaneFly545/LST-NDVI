@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/earthengine": "^1.7.4",
+    "@supabase/supabase-js": "^2.99.2",
     "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
     "leaflet": "^1.9.4",

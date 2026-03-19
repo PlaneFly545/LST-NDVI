@@ -1,6 +1,12 @@
 // pages/evaluasi.js
 import { useState } from 'react';
 import Head from 'next/head';
+import { createClient } from '@supabase/supabase-js';
+
+// Inisialisasi Supabase Client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const ueqCategories = [
     {
@@ -73,11 +79,15 @@ export default function Evaluasi() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
+    // State baru untuk menampung pesan error
+    const [errorMessage, setErrorMessage] = useState(null);
+
     const currentCategory = ueqCategories[currentCategoryIndex];
     const totalCategories = ueqCategories.length;
 
     const handleSelect = (itemId, value) => {
         setAnswers(prev => ({ ...prev, [itemId]: value }));
+        setErrorMessage(null); // Hilangkan pesan error jika user mulai berinteraksi lagi
     };
 
     const handleQuickFill = (value) => {
@@ -86,6 +96,7 @@ export default function Evaluasi() {
             newAnswers[item.id] = value;
         });
         setAnswers(newAnswers);
+        setErrorMessage(null);
     };
 
     const isCategoryComplete = currentCategory.items.every(item => answers[item.id] !== undefined);
@@ -94,6 +105,7 @@ export default function Evaluasi() {
         if (currentCategoryIndex > 0) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setCurrentCategoryIndex(prev => prev - 1);
+            setErrorMessage(null);
         }
     };
 
@@ -101,16 +113,37 @@ export default function Evaluasi() {
         if (currentCategoryIndex < totalCategories - 1) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setCurrentCategoryIndex(prev => prev + 1);
+            setErrorMessage(null);
         }
     };
 
-    const submitEvaluasi = () => {
+    const submitEvaluasi = async () => {
         setIsSubmitting(true);
-        console.log("Data Final UEQ (26 Item):", answers);
-        setTimeout(() => {
+        setErrorMessage(null); // Reset error setiap kali mulai submit baru
+
+        try {
+            // Memformat data jawaban (ID 1-26) ke dalam kolom item_1 s/d item_26
+            const payload = {};
+            for (let i = 1; i <= 26; i++) {
+                payload[`item_${i}`] = answers[i] || null;
+            }
+
+            // Mengirim data ke tabel ueq_responses di Supabase
+            const { error } = await supabase
+                .from('ueq_responses')
+                .insert([payload]);
+
+            if (error) throw error;
+
+            // Jika berhasil
             setIsSubmitting(false);
             setIsSubmitted(true);
-        }, 1500);
+        } catch (error) {
+            console.error("Gagal menyimpan data:", error.message);
+            setIsSubmitting(false);
+            // Set state error alih-alih menggunakan alert()
+            setErrorMessage("Gagal menyimpan data. Pastikan koneksi internet stabil atau sistem sedang dalam perbaikan.");
+        }
     };
 
     if (isSubmitted) {
@@ -157,6 +190,7 @@ export default function Evaluasi() {
                         ></div>
                     </div>
 
+                    {/* Judul Kategori di Tengah */}
                     <div className="mt-8 mb-2 text-center">
                         <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
                             {currentCategory.title}
@@ -232,8 +266,18 @@ export default function Evaluasi() {
                     ))}
                 </div>
 
+                {/* Notifikasi Error (Hanya muncul jika ada error) */}
+                {errorMessage && (
+                    <div className="mt-8 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start md:items-center gap-3 animate-fade-in">
+                        <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 md:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm text-red-200 leading-relaxed">{errorMessage}</p>
+                    </div>
+                )}
+
                 {/* Navigasi Manual */}
-                <div className="mt-10 pt-6 border-t border-neutral-800 flex flex-col-reverse md:flex-row justify-between items-center gap-4">
+                <div className="mt-8 pt-6 border-t border-neutral-800 flex flex-col-reverse md:flex-row justify-between items-center gap-4">
                     <button
                         disabled={currentCategoryIndex === 0}
                         onClick={handlePrevCategory}
@@ -246,13 +290,21 @@ export default function Evaluasi() {
                         <button
                             disabled={!isCategoryComplete || isSubmitting}
                             onClick={submitEvaluasi}
-                            className={`w-full md:w-auto px-8 py-3.5 text-sm md:text-base font-bold rounded-xl transition-all duration-300 shadow-lg
+                            className={`w-full md:w-auto px-8 py-3.5 text-sm md:text-base font-bold rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2
                                 ${isCategoryComplete
                                     ? 'bg-white text-black hover:scale-[1.02] shadow-white/20'
                                     : 'bg-neutral-800 text-gray-600 cursor-not-allowed shadow-none'
                                 }`}
                         >
-                            {isSubmitting ? 'Menyimpan Data...' : 'Simpan Data'}
+                            {isSubmitting ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Menyimpan Data...
+                                </>
+                            ) : 'Simpan Data'}
                         </button>
                     ) : (
                         <button
