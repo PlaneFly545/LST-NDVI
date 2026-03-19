@@ -156,7 +156,15 @@ export default function Evaluasi() {
                             style={{ width: `${((currentCategoryIndex + 1) / totalCategories) * 100}%` }}
                         ></div>
                     </div>
-                    <h2 className="text-base md:text-lg font-semibold text-gray-200 mt-6">{currentCategory.title}</h2>
+
+                    <div className="mt-8 mb-2 text-center">
+                        <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
+                            {currentCategory.title}
+                        </h2>
+                        <p className="text-neutral-400 text-sm mt-1">
+                            Fokus penilaian pada aspek {currentCategory.title.toLowerCase()} aplikasi
+                        </p>
+                    </div>
                 </div>
 
                 {/* Panel Penilaian Serentak - Formal dan Sejajar */}
