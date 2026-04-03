@@ -68,7 +68,7 @@ export default function Home() {
   const [startDateRight, setStartDateRight] = useState(new Date('2020-01-01'));
   const [endDateRight, setEndDateRight] = useState(today);
 
-  const [region, setRegion] = useState('SELURUH BALI');
+  const [region, setRegion] = useState('Seluruh Bali');
   const [layerType, setLayerType] = useState('lst');
   const [selectedGeoJson, setSelectedGeoJson] = useState(baliData);
 
