@@ -36,7 +36,7 @@ const MapLegend = ({ type, min, max }) => {
     : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
 
   return (
-    <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-64">
+    <div className="absolute bottom-6 right-6 z-1000 bg-white/90 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-64">
       <div className="flex items-center justify-between mb-2.5">
         <span className="text-xs font-semibold text-slate-600">
           {type === 'ndvi' ? 'NDVI' : 'Suhu Permukaan'}
@@ -194,14 +194,14 @@ export default function Home() {
           mode: 'history', type: layerType, region_name: regionParam,
           start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0],
           cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold,
-          gap_fill: gapFill // BARU: Parameter gap_fill
+          gap_fill: gapFill
         });
 
         const paramsRight = new URLSearchParams({
           mode: 'history', type: layerType, region_name: regionParam,
           start_date: startDateRight.toISOString().split('T')[0], end_date: endDateRight.toISOString().split('T')[0],
           cloud_cover: debouncedCloudCover, reducer: reducer, vis_min: visMin, vis_max: visMax, threshold: threshold,
-          gap_fill: gapFill // BARU: Parameter gap_fill
+          gap_fill: gapFill
         });
 
         const [resLeft, resRight] = await Promise.all([
@@ -209,7 +209,18 @@ export default function Home() {
           fetch(`/api/map-layer?${paramsRight}`)
         ]);
 
-        if (!resLeft.ok || !resRight.ok) throw new Error("Gagal mengambil data Satelit");
+        // Cek error dengan pesan spesifik (termasuk timeout)
+        if (!resLeft.ok || !resRight.ok) {
+          const errRes = !resLeft.ok ? resLeft : resRight;
+          const errData = await errRes.json().catch(() => ({}));
+          if (errData.error === 'TIMEOUT') {
+            toast.warning('GEE sedang memproses — coba lagi dalam beberapa detik. (GEE cache biasanya membuat request ke-2 jauh lebih cepat)', { id: toastId, duration: 8000 });
+          } else {
+            toast.error(errData.error || 'Gagal mengambil data Satelit.', { id: toastId });
+          }
+          setLoading(false);
+          return;
+        }
 
         const dataLeft = await resLeft.json();
         const dataRight = await resRight.json();
@@ -244,7 +255,21 @@ export default function Home() {
         });
 
         const res = await fetch(`/api/map-layer?${params}`);
-        if (!res.ok) throw new Error("Gagal mengambil data Satelit");
+
+        // Cek error dengan pesan spesifik (termasuk timeout)
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.error === 'TIMEOUT') {
+            toast.warning(
+              'GEE sedang memproses di server — coba lagi dalam beberapa detik. Request ke-2 biasanya jauh lebih cepat karena GEE cache.',
+              { id: toastId, duration: 8000 }
+            );
+          } else {
+            toast.error(errData.error || 'Gagal memproses data.', { id: toastId });
+          }
+          setLoading(false);
+          return;
+        }
 
         const data = await res.json();
         setMapUrl(data.map.urlFormat);
@@ -258,9 +283,9 @@ export default function Home() {
 
     } catch (error) {
       console.error(error);
-      toast.error('Gagal memproses data.', { id: toastId });
+      toast.error('Gagal memproses data. Periksa koneksi dan coba lagi.', { id: toastId });
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleProcess = (e) => {
@@ -429,7 +454,7 @@ export default function Home() {
 
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
-        <div className="flex items-center justify-center mb-4 relative min-h-[28px]">
+        <div className="flex items-center justify-center mb-4 relative min-h-7">
           <span className="text-[13px] font-semibold text-slate-600">Grafik Analitik</span>
           {isSplit && (
             <div className="absolute right-0 flex bg-slate-100 p-0.5 rounded-md">
@@ -481,7 +506,7 @@ export default function Home() {
         </div>
 
         <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-2.5">
-          <Info size={16} className="text-slate-300 flex-shrink-0 mt-0.5" />
+          <Info size={16} className="text-slate-300 shrink-0 mt-0.5" />
           <p className="text-[11px] text-slate-500 leading-relaxed">
             {renderChartSummary(chartMode, activeCData, activeSData, activeStats, trendData)}
           </p>
@@ -501,11 +526,11 @@ export default function Home() {
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <Activity size={20} className="text-slate-800 flex-shrink-0" />
+          <Activity size={20} className="text-slate-800 shrink-0" />
           <h1 className="text-sm md:text-base font-bold tracking-tight text-slate-800 truncate">Spatio-Temporal Analysis Engine</h1>
           {/* Region badge (desktop only) */}
           {stats && (
-            <span className="hidden lg:flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0">
+            <span className="hidden lg:flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
               <MapPin size={10} />
               {stats.region}
             </span>
@@ -539,7 +564,7 @@ export default function Home() {
         <aside className={`
           flex flex-col bg-white transition-all duration-300 border-r border-slate-200
           ${isSidebarOpen
-            ? 'fixed md:relative inset-y-0 left-0 z-50 md:z-auto w-[85vw] sm:w-[380px] md:w-[420px] animate-slide-in-left md:animate-none'
+            ? 'fixed md:relative inset-y-0 left-0 z-50 md:z-auto w-[85vw] sm:w-95 md:w-105 animate-slide-in-left md:animate-none'
             : 'w-0 border-none overflow-hidden'
           }
         `}>
@@ -730,7 +755,7 @@ export default function Home() {
                     <Satellite size={28} className="text-slate-300" />
                   </div>
                   <h3 className="text-sm font-bold text-slate-400 mb-1">Belum Ada Data</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed max-w-[260px]">
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-65">
                     Konfigurasi parameter di atas, lalu tekan tombol <span className="font-semibold text-slate-500">"Proses Data"</span> untuk memulai analisis geospasial.
                   </p>
                 </div>
@@ -830,7 +855,7 @@ export default function Home() {
           {!isSidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-slate-200/50 hover:bg-white hover:shadow-xl transition-all cursor-pointer group"
+              className="absolute top-4 left-4 z-1000 bg-white/95 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-slate-200/50 hover:bg-white hover:shadow-xl transition-all cursor-pointer group"
               aria-label="Buka panel kontrol"
             >
               <PanelLeftOpen size={18} className="text-slate-500 group-hover:text-slate-800 transition-colors" />

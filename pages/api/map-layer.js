@@ -8,7 +8,8 @@ const ALLOWED_REDUCERS = new Set(['Median', 'Mean', 'Max', 'Mosaic']);
 const ALLOWED_GAP_FILL = new Set(['none', 'spatial']);
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MIN_ALLOWED_DATE = new Date('2013-01-01T00:00:00.000Z');
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 120_000; // 2 menit — GEE bisa memakan 30-120 detik untuk wilayah besar
+const TIMEOUT_ERROR_TAG = 'GEE_TIMEOUT';
 const MAX_QUERY_SIZE_BYTES = 2048;
 
 let geeAuthPromise = null;
@@ -60,13 +61,15 @@ function getTotalQuerySize(queryObj) {
   }, 0);
 }
 
-function withTimeout(promise, timeoutMs, timeoutMessage = 'Request timeout.') {
+function withTimeout(promise, timeoutMs) {
   return Promise.race([
     promise,
     new Promise((_, reject) => {
       const id = setTimeout(() => {
         clearTimeout(id);
-        reject(new Error(timeoutMessage));
+        const err = new Error('Proses GEE melebihi batas waktu. GEE sedang memproses di server — coba lagi dalam beberapa detik.');
+        err.code = TIMEOUT_ERROR_TAG;
+        reject(err);
       }, timeoutMs);
     }),
   ]);
@@ -326,8 +329,16 @@ export default async function handler(req, res) {
     const visParams = { min: visMin, max: visMax, palette };
 
     const geeExecution = Promise.all([
-      new Promise((resolve, reject) =>
-        finalImage.select(mainBand).getMap(visParams, (map, err) => (err ? reject(err) : resolve(map)))
+      // getMap: resolve(null) jika gagal agar tidak membatalkan seluruh Promise.all
+      new Promise((resolve) =>
+        finalImage.select(mainBand).getMap(visParams, (map, err) => {
+          if (err) {
+            safeErrorLog('getMap error (non-fatal):', { message: err?.message });
+            resolve(null);
+          } else {
+            resolve(map);
+          }
+        })
       ),
       new Promise((resolve) => aggregateStats.evaluate((val) => resolve(val || {}))),
       new Promise((resolve) => timeSeriesList.evaluate((val) => resolve(val || { features: [] }))),
@@ -352,9 +363,15 @@ export default async function handler(req, res) {
 
     const [mapId, statsRaw, chartRaw, downloadUrl, impactRaw, scatterRaw, baselineRaw] = await withTimeout(
       geeExecution,
-      REQUEST_TIMEOUT_MS,
-      'Proses melebihi batas waktu 60 detik.'
+      REQUEST_TIMEOUT_MS
     );
+
+    // Jika getMap gagal (null), kembalikan error yang informatif
+    if (!mapId) {
+      return res.status(422).json({
+        error: 'Tidak ada piksel valid pada rentang waktu/wilayah tersebut. Coba perluas rentang tanggal atau naikkan batas tutupan awan.',
+      });
+    }
 
     const sortedChartData = (chartRaw.features || [])
       .map((f) => {
@@ -391,8 +408,19 @@ export default async function handler(req, res) {
   } catch (error) {
     safeErrorLog('GEE Error (sanitized response):', {
       name: error?.name,
+      code: error?.code,
       message: error?.message,
     });
+
+    // Bedakan timeout dari error internal lainnya
+    if (error?.code === TIMEOUT_ERROR_TAG) {
+      return res.status(504).json({
+        error: 'TIMEOUT',
+        message:
+          'Proses GEE memakan waktu lebih dari 2 menit. GEE mungkin sedang memproses di server — silakan coba lagi dalam beberapa detik (biasanya request kedua jauh lebih cepat karena GEE cache).',
+      });
+    }
+
     return res.status(500).json({
       error: 'Terjadi kesalahan internal saat memproses permintaan.',
     });
