@@ -1,13 +1,16 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   Leaf, ThermometerSun, Activity, Menu, Download,
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
-  TrendingUp, History, Square, Columns, Info
+  TrendingUp, History, Square, Columns, Info,
+  PanelLeftOpen, PanelLeftClose, MapPin, X, ClipboardList,
+  Satellite, BarChart3
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -33,15 +36,15 @@ const MapLegend = ({ type, min, max }) => {
     : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
 
   return (
-    <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200/50 w-72">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-slate-600 tracking-wider uppercase">
+    <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-64">
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-xs font-semibold text-slate-600">
           {type === 'ndvi' ? 'NDVI' : 'Suhu Permukaan'}
         </span>
-        <span className="px-2 py-0.5 text-[10px] bg-slate-100 rounded text-slate-500 font-medium">L8/9</span>
+        <span className="px-2 py-0.5 text-[10px] bg-slate-100 rounded text-slate-500">Landsat 8/9</span>
       </div>
-      <div className="w-full h-2.5 mb-2 rounded-full" style={{ background: gradient }}></div>
-      <div className="flex justify-between text-xs font-medium text-slate-600">
+      <div className="w-full h-2 mb-2 rounded-full" style={{ background: gradient }}></div>
+      <div className="flex justify-between text-[11px] text-slate-500">
         <span>{min}</span>
         <span>{((min + max) / 2).toFixed(1)}</span>
         <span>{max}</span>
@@ -104,10 +107,13 @@ export default function Home() {
   // BARU: State untuk metode Gap Filling
   const [gapFill, setGapFill] = useState('none');
 
-  const regions = ['SELURUH BALI', ...baliData.features.map(f => f.properties.nm_kabkota).sort()];
+  const regions = ['Seluruh Bali', ...baliData.features.map(f => f.properties.nm_kabkota).sort()];
   const predictionOffsets = [1, 3, 5, 10];
 
   const landsatMinDate = new Date('2013-01-01');
+
+  // Helper: title case display for region names
+  const toTitleCase = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,7 +156,7 @@ export default function Home() {
   const handleRegionChange = (e) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
-    if (newRegion === 'SELURUH BALI') setSelectedGeoJson(baliData);
+    if (newRegion === 'Seluruh Bali') setSelectedGeoJson(baliData);
     else {
       const feature = baliData.features.find(f => f.properties.nm_kabkota === newRegion);
       if (feature) setSelectedGeoJson(feature);
@@ -181,7 +187,7 @@ export default function Home() {
     const toastId = toast.loading(loadingMsg);
 
     try {
-      const regionParam = region === 'SELURUH BALI' ? 'ALL' : region;
+      const regionParam = region === 'Seluruh Bali' ? 'ALL' : region;
 
       if (visualMode === 'split') {
         const paramsLeft = new URLSearchParams({
@@ -336,58 +342,78 @@ export default function Home() {
     return "Sedang mengumpulkan sampel data untuk diinterpretasikan...";
   };
 
+  // Skeleton Loading untuk KPI Cards
+  const renderKPISkeleton = () => (
+    <div className="grid grid-cols-2 gap-3 mt-4">
+      {[1, 2, 3].map(i => (
+        <div key={i} className={`flex flex-col p-4 bg-white border border-slate-100 rounded-xl ${i === 3 ? 'col-span-2' : ''}`}>
+          <div className="skeleton h-3 w-20 mb-3"></div>
+          <div className="skeleton h-6 w-28"></div>
+        </div>
+      ))}
+    </div>
+  );
+
   const renderKPIs = () => {
     if (!stats) return null;
+
+    const cardClass = "flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200";
+
     if (stats.is_prediction) {
       const delta = stats.mean - stats.baseline_mean;
       const isWorse = layerType === 'lst' ? delta > 0 : delta < 0;
       return (
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          <div className="flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide">Proyeksi {stats.target_year}</span>
-            <span className="text-2xl font-bold text-slate-800 leading-none">
-              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{stats.unit}</span>
+        <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
+          <div className={cardClass}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Proyeksi {stats.target_year}</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
             </span>
           </div>
-          <div className="flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide">Delta (Selisih)</span>
-            <span className={`text-2xl font-bold leading-none ${isWorse ? 'text-rose-500' : 'text-emerald-500'}`}>
-              {delta > 0 ? '+' : ''}{delta.toFixed(2)} <span className="text-xs font-normal opacity-70">{stats.unit}</span>
+          <div className={cardClass}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Delta (Selisih)</span>
+            <span className={`text-xl font-bold leading-none ${isWorse ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {delta > 0 ? '+' : ''}{delta.toFixed(2)} <span className="text-xs font-normal opacity-60">{stats.unit}</span>
             </span>
           </div>
-          <div className="col-span-2 flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide flex items-center gap-1.5"><AlertTriangle size={14} /> Wilayah Terdampak ({'>'} {stats.threshold})</span>
-            <span className="text-2xl font-bold text-slate-800 leading-none">
-              {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-500">Hektar</span>
+          <div className={`col-span-2 ${cardClass}`}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah terdampak (di atas {stats.threshold})</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-400">Hektar</span>
             </span>
           </div>
         </div>
       );
     } else {
       return (
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          <div className="flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide">Rata-rata {layerType}</span>
-            <span className="text-2xl font-bold text-slate-800 leading-none">
-              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{stats.unit}</span>
+        <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
+          <div className={cardClass}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Rata-rata {layerType === 'lst' ? 'LST' : 'NDVI'}</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
             </span>
           </div>
-          <div className="flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide">Maksimum</span>
-            <span className="text-2xl font-bold text-slate-800 leading-none">
-              {stats.max.toFixed(2)} <span className="text-xs font-normal text-slate-500">{stats.unit}</span>
+          <div className={cardClass}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Maksimum</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.max.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
             </span>
           </div>
-          <div className="col-span-2 flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-            <span className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wide flex items-center gap-1.5"><AlertTriangle size={14} /> Wilayah Terdampak ({'>'} {stats.threshold})</span>
-            <span className="text-2xl font-bold text-slate-800 leading-none">
-              {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-500">Hektar</span>
+          <div className={`col-span-2 ${cardClass}`}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah terdampak (di atas {stats.threshold})</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-400">Hektar</span>
             </span>
           </div>
         </div>
       );
     }
   };
+
+  // Vis range gradient preview
+  const visGradient = layerType === 'ndvi'
+    ? 'linear-gradient(to right, #ef4444, #facc15, #22c55e)'
+    : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
 
   // Komponen Helper untuk menyatukan render Grafik
   const renderChartSection = () => {
@@ -403,22 +429,22 @@ export default function Home() {
 
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
-        <div className="flex items-center justify-between mb-3">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grafik Analitik</label>
+        <div className="flex items-center justify-center mb-4 relative min-h-[28px]">
+          <span className="text-[13px] font-semibold text-slate-600">Grafik Analitik</span>
           {isSplit && (
-            <div className="flex bg-slate-200 p-0.5 rounded-md">
-              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Peta Kiri</button>
-              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Peta Kanan</button>
+            <div className="absolute right-0 flex bg-slate-100 p-0.5 rounded-md">
+              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta Kiri</button>
+              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta Kanan</button>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1.5 rounded-lg">
-          <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <TrendingUp size={16} /> Tren Waktu
+        <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1 rounded-lg">
+          <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <TrendingUp size={14} /> Tren Waktu
           </button>
-          <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
-            <ScatterIcon size={16} /> Korelasi
+          <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
+            <ScatterIcon size={14} /> Korelasi
           </button>
         </div>
 
@@ -454,9 +480,9 @@ export default function Home() {
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] flex items-start gap-3">
-          <Info size={18} className="text-slate-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-slate-700 leading-relaxed font-medium">
+        <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-2.5">
+          <Info size={16} className="text-slate-300 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] text-slate-500 leading-relaxed">
             {renderChartSummary(chartMode, activeCData, activeSData, activeStats, trendData)}
           </p>
         </div>
@@ -466,22 +492,65 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden font-sans bg-slate-50 text-slate-800 selection:bg-slate-200">
-      <Head><title>Spatio-Temporal Analysis Engine</title></Head>
+      <Head>
+        <title>Spatio-Temporal Analysis Engine — LST & NDVI Bali</title>
+        <meta name="description" content="Analisis spasio-temporal Land Surface Temperature (LST) dan Normalized Difference Vegetation Index (NDVI) wilayah Bali menggunakan data Landsat 8/9 via Google Earth Engine." />
+      </Head>
       <Toaster position="top-center" />
 
-      <nav className="flex items-center justify-between px-6 bg-white border-b h-16 border-slate-200 z-50">
-        <div className="flex items-center gap-3">
-          <Activity size={20} className="text-slate-800" />
-          <h1 className="text-base font-bold tracking-tight text-slate-800">Spatio-Temporal Analysis Engine</h1>
+      {/* === NAVBAR === */}
+      <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <Activity size={20} className="text-slate-800 flex-shrink-0" />
+          <h1 className="text-sm md:text-base font-bold tracking-tight text-slate-800 truncate">Spatio-Temporal Analysis Engine</h1>
+          {/* Region badge (desktop only) */}
+          {stats && (
+            <span className="hidden lg:flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0">
+              <MapPin size={10} />
+              {stats.region}
+            </span>
+          )}
         </div>
-        <button type="button" onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">
-          <Menu size={20} className="text-slate-600" />
-        </button>
+        <div className="flex items-center gap-1 md:gap-2">
+          <Link href="/evaluasi" className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors no-underline">
+            <ClipboardList size={14} />
+            Evaluasi UEQ
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!isSidebarOpen)}
+            className="p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label={isSidebarOpen ? 'Tutup panel kontrol' : 'Buka panel kontrol'}
+          >
+            {isSidebarOpen ? <PanelLeftClose size={20} className="text-slate-600" /> : <PanelLeftOpen size={20} className="text-slate-600" />}
+          </button>
+        </div>
       </nav>
 
       <main className="relative flex flex-1 overflow-hidden">
-        <aside className={`flex flex-col bg-white transition-all duration-300 border-r border-slate-200 ${isSidebarOpen ? 'w-[420px]' : 'w-0 border-none overflow-hidden'}`}>
-          <div className="flex flex-col flex-1 p-6 overflow-y-auto">
+        {/* Mobile sidebar backdrop */}
+        {isSidebarOpen && (
+          <div
+            className="md:hidden fixed inset-0 z-40 sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <aside className={`
+          flex flex-col bg-white transition-all duration-300 border-r border-slate-200
+          ${isSidebarOpen
+            ? 'fixed md:relative inset-y-0 left-0 z-50 md:z-auto w-[85vw] sm:w-[380px] md:w-[420px] animate-slide-in-left md:animate-none'
+            : 'w-0 border-none overflow-hidden'
+          }
+        `}>
+          {/* Mobile sidebar header */}
+          <div className="flex md:hidden items-center justify-between px-4 py-3 border-b border-slate-200">
+            <span className="text-sm font-bold text-slate-800">Panel Kontrol</span>
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-md hover:bg-slate-100 cursor-pointer" aria-label="Tutup panel">
+              <X size={18} className="text-slate-500" />
+            </button>
+          </div>
+          <div className="flex flex-col flex-1 p-4 md:p-6 overflow-y-auto">
 
             {/* Mode Analisis */}
             <div className="flex bg-slate-100 p-1.5 rounded-lg mb-4">
@@ -508,15 +577,15 @@ export default function Home() {
               </div>
             )}
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Konfigurasi Dasar */}
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">1. Skenario Pemodelan</label>
+                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Skenario Pemodelan</span>
 
                 {analysisMode === 'prediksi' && (
                   <div className="mb-4">
-                    <span className="text-sm font-medium text-slate-600 mb-2 block">Target Masa Depan</span>
-                    <div className="flex bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Target Masa Depan</span>
+                    <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-lg">
                       {predictionOffsets.map((offset) => {
                         const yr = currentYear + offset;
                         return (
@@ -530,66 +599,80 @@ export default function Home() {
                 )}
 
                 <div className="mb-4">
-                  <span className="text-sm font-medium text-slate-600 mb-2 block">
-                    {visualMode === 'split' ? 'Periode Historis (Kiri)' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline Pembelajaran)' : 'Rentang Tanggal Analisis')}
+                  <span className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    {visualMode === 'split' ? 'Periode Historis (Kiri)' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline)' : 'Rentang Tanggal')}
                   </span>
                   <div className="flex items-center gap-2">
-                    <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
-                    <span className="text-slate-400">-</span>
-                    <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
+                    <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                    <span className="text-slate-300 text-sm">—</span>
+                    <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                   </div>
                 </div>
 
                 {visualMode === 'split' && (
                   <div className="mb-4">
-                    <span className="text-sm font-medium text-slate-600 mb-2 block">Periode Historis (Kanan)</span>
+                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode Historis (Kanan)</span>
                     <div className="flex items-center gap-2">
-                      <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
-                      <span className="text-slate-400">-</span>
-                      <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="w-full px-3 py-2 text-sm font-medium bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 cursor-pointer text-center" dateFormat="dd/MM/yyyy" />
+                      <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                      <span className="text-slate-300 text-sm">—</span>
+                      <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                     </div>
                   </div>
                 )}
 
                 <div className="mb-2">
-                  <span className="text-sm font-medium text-slate-600 mb-2 block">Area Tinjauan</span>
+                  <span className="text-xs font-medium text-slate-500 mb-1.5 block">Area Tinjauan</span>
                   <div className="relative">
-                    <select value={region} onChange={handleRegionChange} className="w-full px-3 py-2.5 text-sm font-semibold bg-slate-50 border rounded-lg border-slate-200 outline-none focus:border-slate-400 appearance-none cursor-pointer">
-                      {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                    <select value={region} onChange={handleRegionChange} className="w-full px-3 py-2 text-xs font-medium bg-white border rounded-lg border-slate-200 outline-none focus:border-slate-400 appearance-none cursor-pointer text-slate-700">
+                      {regions.map(r => <option key={r} value={r}>{toTitleCase(r)}</option>)}
                     </select>
-                    <ChevronDown size={16} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={12} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
               {/* Parameter Lingkungan */}
               <div className="pt-4 border-t border-slate-100">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">2. Parameter Lingkungan</label>
+                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Parameter Lingkungan</span>
 
                 <div className="flex gap-2 mb-4">
                   {['lst', 'ndvi'].map((type) => (
-                    <button key={type} type="button" onClick={() => handleTypeChange(type)} className={`flex-1 py-2.5 rounded-lg border text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${layerType === type ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                      {type === 'lst' ? <ThermometerSun size={16} /> : <Leaf size={16} />}
-                      {type === 'lst' ? 'Suhu (LST)' : 'Vegetasi'}
+                    <button key={type} type="button" onClick={() => handleTypeChange(type)} className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${layerType === type ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                      {type === 'lst' ? <ThermometerSun size={14} /> : <Leaf size={14} />}
+                      {type === 'lst' ? 'Suhu (LST)' : 'Vegetasi (NDVI)'}
                     </button>
                   ))}
                 </div>
 
                 <div className="px-4 py-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <div className="flex justify-between text-xs font-medium mb-2">
-                    <span className="text-slate-500">Filter Tutupan Awan</span>
-                    <span className="text-slate-700 font-bold">{cloudCover}% Maks</span>
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="text-slate-500">Tutupan Awan</span>
+                    <span className="text-slate-600 font-semibold">{cloudCover}%</span>
                   </div>
                   <input type="range" min="0" max="100" value={cloudCover} onChange={(e) => setCloudCover(e.target.value)} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
                 </div>
 
+                {/* Vis Range Preview */}
+                <div className="px-4 py-3 mt-3 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="text-slate-500">Rentang Visualisasi</span>
+                    <span className="text-slate-600 font-semibold">{visMin} — {visMax}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full mb-2" style={{ background: visGradient }}></div>
+                  <div className="flex items-center gap-2">
+                    <input type="number" step="0.1" value={visMin} onChange={(e) => setVisMin(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center" placeholder="Min" />
+                    <span className="text-slate-300 text-xs">—</span>
+                    <input type="number" step="0.1" value={visMax} onChange={(e) => setVisMax(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center" placeholder="Max" />
+                  </div>
+                </div>
+
                 <div className="px-4 py-3 mt-3 bg-slate-50 border border-slate-100 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><AlertTriangle size={14} /> Ambang Batas Dampak</span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1.5"><AlertTriangle size={12} /> Ambang batas dampak</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="number" step="0.1" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-md outline-none focus:border-slate-400 bg-white text-slate-700" />
-                    <span className="text-xs font-medium text-slate-500 whitespace-nowrap">{layerType === 'lst' ? 'Derajat (°C)' : 'Index'}</span>
+                    <input type="number" step="0.1" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600" />
+                    <span className="text-xs text-slate-400 whitespace-nowrap">{layerType === 'lst' ? '°C' : 'Index'}</span>
                   </div>
                 </div>
               </div>
@@ -597,74 +680,100 @@ export default function Home() {
               {/* BARU: METODE GAP FILLING (Hanya tampil di mode Historis) */}
               {analysisMode !== 'prediksi' && (
                 <div className="pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">3. Algoritma Pemrosesan Awan</label>
-                    <div className="group relative cursor-help">
-                      <Info size={14} className="text-slate-400 hover:text-slate-600 transition-colors" />
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-[10px] rounded-lg shadow-xl z-50 text-left leading-relaxed border border-slate-700">
-                        <span className="block font-bold text-slate-200 mb-1">Komposit Temporal (Bawaan):</span>
-                        <span className="text-slate-400 block mb-2">Reduksi statistik berbasis waktu (median/mean) pada kumpulan citra. Mempertahankan nilai fisis asli observasi tanpa interpolasi buatan.</span>
+                  <div className="flex items-center justify-center gap-1.5 mb-4">
+                    <span className="text-[13px] font-semibold text-slate-600 block">Pemrosesan Awan</span>
+                    <div className="group relative cursor-help flex items-center">
+                      <Info size={13} className="text-slate-300 hover:text-slate-500 transition-colors" />
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-[11px] rounded-xl shadow-xl z-50 text-left leading-relaxed border border-slate-700">
+                        <span className="block font-semibold text-slate-200 mb-1">Komposit Temporal (Bawaan)</span>
+                        <span className="text-slate-400 block mb-2">Reduksi statistik berbasis waktu (median/mean) pada kumpulan citra. Mempertahankan nilai fisis asli observasi.</span>
 
-                        <span className="block font-bold text-slate-200 mb-1">Interpolasi Spasial (Focal Mean):</span>
-                        <span className="text-slate-400 block">Menambal kekosongan piksel (gap-filling) akibat masking awan menggunakan nilai rata-rata piksel bertetangga. Ideal untuk kontinuitas kartografi.</span>
+                        <span className="block font-semibold text-slate-200 mb-1">Interpolasi Spasial (Focal Mean)</span>
+                        <span className="text-slate-400 block">Menambal kekosongan piksel akibat masking awan menggunakan rata-rata piksel tetangga.</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2 mb-2">
-                    <button type="button" onClick={() => setGapFill('none')} className={`flex-1 py-2.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer uppercase tracking-wide ${gapFill === 'none' ? 'bg-slate-800 border-slate-800 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <button type="button" onClick={() => setGapFill('none')} className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${gapFill === 'none' ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
                       Komposit Temporal
                     </button>
-                    <button type="button" onClick={() => setGapFill('spatial')} className={`flex-1 py-2.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer uppercase tracking-wide ${gapFill === 'spatial' ? 'bg-slate-800 border-slate-800 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <button type="button" onClick={() => setGapFill('spatial')} className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${gapFill === 'spatial' ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
                       Interpolasi Spasial
                     </button>
                   </div>
                 </div>
               )}
 
-              <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 mt-2 text-sm font-bold text-white transition-all rounded-lg bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]">
-                {loading ? <span className="animate-spin">⟳</span> : <Activity size={18} />}
-                {visualMode === 'split' ? 'Proses Komparasi Peta' : (analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data')}
+              <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 mt-2 text-sm font-semibold text-white transition-all rounded-xl bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]">
+                {loading ? <span className="animate-spin">⟳</span> : <Activity size={16} />}
+                {visualMode === 'split' ? 'Proses Komparasi' : (analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data')}
               </button>
             </div>
 
             {/* HASIL / OUTPUT */}
+            {loading && !stats && (
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block animate-pulse">Memproses...</span>
+                {renderKPISkeleton()}
+                {/* Chart skeleton */}
+                <div className="mt-6 pt-6 border-t border-slate-100">
+                  <div className="skeleton h-3 w-24 mb-4"></div>
+                  <div className="skeleton h-48 w-full"></div>
+                </div>
+              </div>
+            )}
+
+            {!stats && !loading && (
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                    <Satellite size={28} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-400 mb-1">Belum Ada Data</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-[260px]">
+                    Konfigurasi parameter di atas, lalu tekan tombol <span className="font-semibold text-slate-500">"Proses Data"</span> untuk memulai analisis geospasial.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {stats && (
-              <div className="mt-8 pt-6 border-t border-slate-100 animate-in fade-in duration-500">
+              <div className="mt-8 pt-6 border-t border-slate-100 animate-fade-in">
                 {visualMode === 'split' ? (
                   <>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Komparasi Statistik</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Komparasi Statistik</span>
+                    <div className="grid grid-cols-2 gap-3">
                       {/* Blok Statistik Kiri */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-bold text-slate-500 bg-slate-100 p-1.5 rounded text-center tracking-wider">PERIODE KIRI</div>
-                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase">Rata-rata</span>
-                          <span className="text-lg font-bold text-slate-800">{stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{stats.unit}</span></span>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Periode Kiri</div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
+                          <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
+                          <span className="text-lg font-bold text-slate-800">{stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span></span>
                         </div>
-                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
-                          <span className="text-lg font-bold text-slate-800">{stats.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-500">Ha</span></span>
+                        <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
+                          <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
+                          <span className="text-lg font-bold text-slate-800">{stats.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-400">Ha</span></span>
                         </div>
                       </div>
 
                       {/* Blok Statistik Kanan */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-bold text-slate-500 bg-slate-100 p-1.5 rounded text-center tracking-wider">PERIODE KANAN</div>
-                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase">Rata-rata</span>
-                          <span className="text-lg font-bold text-slate-800">{statsRight.mean.toFixed(2)} <span className="text-xs font-normal text-slate-500">{statsRight.unit}</span></span>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Periode Kanan</div>
+                        <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
+                          <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
+                          <span className="text-lg font-bold text-slate-800">{statsRight.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{statsRight.unit}</span></span>
                         </div>
-                        <div className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold mb-0.5 uppercase flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
-                          <span className="text-lg font-bold text-slate-800">{statsRight.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-500">Ha</span></span>
+                        <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
+                          <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><AlertTriangle size={10} /> Area Terdampak</span>
+                          <span className="text-lg font-bold text-slate-800">{statsRight.impact_area_ha?.toLocaleString('id-ID', { maximumFractionDigits: 1 }) || 0} <span className="text-xs font-normal text-slate-400">Ha</span></span>
                         </div>
                       </div>
                     </div>
 
                     {/* Blok Kesimpulan / Selisih */}
-                    <div className="mt-4 p-4 bg-slate-800 text-white rounded-xl shadow-md relative overflow-hidden">
+                    <div className="mt-3 p-4 bg-slate-800 text-white rounded-xl shadow-md relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-2 block">Perubahan (Kanan - Kiri)</span>
+                      <span className="text-[11px] text-slate-300 mb-2 block">Perubahan (Kanan − Kiri)</span>
                       <div className="flex justify-between items-end">
                         <div>
                           <span className="text-xs text-slate-400 block mb-0.5">Selisih Rata-rata</span>
@@ -683,7 +792,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Ringkasan Analitik</label>
+                    <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Ringkasan Analitik</span>
                     {renderKPIs()}
                   </>
                 )}
@@ -701,12 +810,34 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* Mobile link to Evaluasi */}
+            <div className="md:hidden mt-6 pt-4 border-t border-slate-100">
+              <Link href="/evaluasi" className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 py-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors no-underline w-full">
+                <ClipboardList size={14} />
+                Evaluasi UEQ
+              </Link>
+            </div>
           </div>
         </aside>
 
+        {/* === MAP AREA === */}
         <div className="relative flex-1 bg-slate-100 flex">
           <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
           {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
+
+          {/* Floating sidebar toggle (visible when sidebar is closed) */}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-slate-200/50 hover:bg-white hover:shadow-xl transition-all cursor-pointer group"
+              aria-label="Buka panel kontrol"
+            >
+              <PanelLeftOpen size={18} className="text-slate-500 group-hover:text-slate-800 transition-colors" />
+            </button>
+          )}
+
+
         </div>
       </main>
     </div>

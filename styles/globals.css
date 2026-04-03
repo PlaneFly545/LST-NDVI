@@ -34,20 +34,224 @@
   background: var(--color-slate-400);
 }
 
-/* Fix React Datepicker di Tailwind v4 */
+/* ============================================
+   DatePicker: Input + Calendar Popup Theming
+   ============================================ */
+
+/* Wrapper */
 .react-datepicker-wrapper {
   width: 100%;
 }
+
+/* Custom input class */
+.datepicker-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-slate-700);
+  background: var(--color-white);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.datepicker-input:focus {
+  border-color: var(--color-slate-400);
+}
+
+/* Fallback: style all DatePicker inputs */
 .react-datepicker__input-container input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-slate-700);
+  background: var(--color-white);
   border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
   outline: none;
-  color: var(--color-slate-800);
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
 .react-datepicker__input-container input:focus {
-  border-color: var(--color-bmkg-500);
-  box-shadow: 0 0 0 3px var(--color-bmkg-100);
+  border-color: var(--color-slate-400);
+}
+
+/* Calendar popup container */
+.react-datepicker {
+  font-family: "Inter", system-ui, sans-serif !important;
+  border: 1px solid var(--color-slate-200) !important;
+  border-radius: 0.75rem !important;
+  background: white !important;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.12),
+              0 4px 12px -4px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden;
+}
+.react-datepicker__triangle {
+  display: none !important;
+}
+
+/* Header area (month/year nav) */
+.react-datepicker__header {
+  background: var(--color-slate-50) !important;
+  border-bottom: 1px solid var(--color-slate-100) !important;
+  padding: 0.75rem 0.75rem 0.5rem !important;
+  border-top-left-radius: 0.75rem !important;
+  border-top-right-radius: 0.75rem !important;
+}
+.react-datepicker__current-month {
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  color: var(--color-slate-800) !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Navigation arrows */
+.react-datepicker__navigation {
+  top: 0.8rem !important;
+}
+.react-datepicker__navigation-icon::before {
+  border-color: var(--color-slate-400) !important;
+  border-width: 2px 2px 0 0 !important;
+  height: 7px !important;
+  width: 7px !important;
+}
+.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: var(--color-slate-800) !important;
+}
+
+/* Day names row */
+.react-datepicker__day-names {
+  margin-bottom: 0 !important;
+}
+.react-datepicker__day-name {
+  color: var(--color-slate-400) !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.1rem !important;
+}
+
+/* Day cells */
+.react-datepicker__day {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  color: var(--color-slate-700) !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.1rem !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.15s !important;
+}
+.react-datepicker__day:hover {
+  background: var(--color-slate-100) !important;
+  color: var(--color-slate-800) !important;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: var(--color-slate-800) !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+.react-datepicker__day--selected:hover {
+  background: var(--color-slate-900) !important;
+}
+.react-datepicker__day--today {
+  font-weight: 700 !important;
+  color: var(--color-slate-800) !important;
+}
+.react-datepicker__day--today.react-datepicker__day--selected {
+  color: white !important;
+}
+.react-datepicker__day--outside-month {
+  color: var(--color-slate-300) !important;
+}
+.react-datepicker__day--disabled {
+  color: var(--color-slate-200) !important;
+}
+
+/* Month/Year dropdown selects */
+.react-datepicker__month-dropdown-container,
+.react-datepicker__year-dropdown-container {
+  margin: 0 0.25rem !important;
+}
+.react-datepicker__month-dropdown-container select,
+.react-datepicker__year-dropdown-container select,
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  font-family: "Inter", system-ui, sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  color: var(--color-slate-700) !important;
+  background: white !important;
+  border: 1px solid var(--color-slate-200) !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.375rem !important;
+  outline: none !important;
+  cursor: pointer !important;
+  appearance: auto !important;
+}
+.react-datepicker__month-select:focus,
+.react-datepicker__year-select:focus {
+  border-color: var(--color-slate-400) !important;
+}
+
+/* Month container */
+.react-datepicker__month {
+  margin: 0.25rem 0.5rem 0.5rem !important;
+}
+
+/* ============================================
+   BATCH 3 & 4: Animasi & Utilitas UI
+   ============================================ */
+
+/* Skeleton Loading Pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, var(--color-slate-100) 50%, var(--color-slate-200) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Slide-in from left (sidebar open) */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+/* Mobile sidebar overlay backdrop */
+.sidebar-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+/* Konfirmasi modal backdrop */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
 }

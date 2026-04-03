@@ -1,7 +1,9 @@
 // pages/evaluasi.js
 import { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import { ArrowLeft, Check, ChevronRight, ChevronLeft, AlertCircle, Activity } from 'lucide-react';
 
 // Inisialisasi Supabase Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +14,7 @@ const ueqCategories = [
     {
         id: "attractiveness",
         title: "Daya Tarik",
+        description: "Penilaian kesan pertama dan daya tarik visual aplikasi",
         items: [
             { id: 1, left: "Menjengkelkan", right: "Menyenangkan" },
             { id: 12, left: "Buruk", right: "Baik" },
@@ -24,6 +27,7 @@ const ueqCategories = [
     {
         id: "perspicuity",
         title: "Kejelasan",
+        description: "Seberapa mudah memahami dan mempelajari aplikasi",
         items: [
             { id: 2, left: "Sulit dipahami", right: "Mudah dipahami" },
             { id: 4, left: "Sulit dipelajari", right: "Mudah dipelajari" },
@@ -34,6 +38,7 @@ const ueqCategories = [
     {
         id: "efficiency",
         title: "Efisiensi",
+        description: "Kecepatan dan ketepatan dalam menyelesaikan tugas",
         items: [
             { id: 9, left: "Lambat", right: "Cepat" },
             { id: 19, left: "Tidak praktis", right: "Praktis" },
@@ -44,6 +49,7 @@ const ueqCategories = [
     {
         id: "dependability",
         title: "Ketepatan",
+        description: "Keandalan dan keamanan penggunaan aplikasi",
         items: [
             { id: 8, left: "Tidak dapat diprediksi", right: "Dapat diprediksi" },
             { id: 11, left: "Menghambat", right: "Mendukung" },
@@ -54,6 +60,7 @@ const ueqCategories = [
     {
         id: "stimulation",
         title: "Stimulasi",
+        description: "Seberapa menarik dan memotivasi penggunaan aplikasi",
         items: [
             { id: 6, left: "Membosankan", right: "Mengasyikkan" },
             { id: 26, left: "Tidak memotivasi", right: "Memotivasi" },
@@ -64,6 +71,7 @@ const ueqCategories = [
     {
         id: "novelty",
         title: "Kebaruan",
+        description: "Tingkat kreativitas dan inovasi desain aplikasi",
         items: [
             { id: 3, left: "Monoton", right: "Kreatif" },
             { id: 10, left: "Konvensional", right: "Berdaya cipta" },
@@ -78,16 +86,24 @@ export default function Evaluasi() {
     const [answers, setAnswers] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-
-    // State baru untuk menampung pesan error
     const [errorMessage, setErrorMessage] = useState(null);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const currentCategory = ueqCategories[currentCategoryIndex];
     const totalCategories = ueqCategories.length;
 
+    // Progress tracking per category
+    const answeredInCategory = currentCategory.items.filter(item => answers[item.id] !== undefined).length;
+    const totalInCategory = currentCategory.items.length;
+    const isCategoryComplete = answeredInCategory === totalInCategory;
+
+    // Total progress across all categories
+    const totalAnswered = Object.keys(answers).length;
+    const totalQuestions = ueqCategories.reduce((sum, cat) => sum + cat.items.length, 0);
+
     const handleSelect = (itemId, value) => {
         setAnswers(prev => ({ ...prev, [itemId]: value }));
-        setErrorMessage(null); // Hilangkan pesan error jika user mulai berinteraksi lagi
+        setErrorMessage(null);
     };
 
     const handleQuickFill = (value) => {
@@ -98,8 +114,6 @@ export default function Evaluasi() {
         setAnswers(newAnswers);
         setErrorMessage(null);
     };
-
-    const isCategoryComplete = currentCategory.items.every(item => answers[item.id] !== undefined);
 
     const handlePrevCategory = () => {
         if (currentCategoryIndex > 0) {
@@ -117,93 +131,156 @@ export default function Evaluasi() {
         }
     };
 
+    const handleSubmitClick = () => {
+        // Validasi semua jawaban terisi dan dalam range 1-7
+        for (let i = 1; i <= 26; i++) {
+            const val = answers[i];
+            if (val === undefined || val === null || !Number.isInteger(val) || val < 1 || val > 7) {
+                setErrorMessage("Mohon lengkapi semua jawaban (1-7) sebelum menyimpan.");
+                return;
+            }
+        }
+        setShowConfirmModal(true);
+    };
+
     const submitEvaluasi = async () => {
+        setShowConfirmModal(false);
         setIsSubmitting(true);
-        setErrorMessage(null); // Reset error setiap kali mulai submit baru
+        setErrorMessage(null);
 
         try {
-            // Memformat data jawaban (ID 1-26) ke dalam kolom item_1 s/d item_26
             const payload = {};
             for (let i = 1; i <= 26; i++) {
                 payload[`item_${i}`] = answers[i] || null;
             }
 
-            // Mengirim data ke tabel ueq_responses di Supabase
             const { error } = await supabase
                 .from('ueq_responses')
                 .insert([payload]);
 
             if (error) throw error;
 
-            // Jika berhasil
             setIsSubmitting(false);
             setIsSubmitted(true);
         } catch (error) {
             console.error("Gagal menyimpan data:", error.message);
             setIsSubmitting(false);
-            // Set state error alih-alih menggunakan alert()
             setErrorMessage("Gagal menyimpan data. Pastikan koneksi internet stabil atau sistem sedang dalam perbaikan.");
         }
     };
 
+    // === HALAMAN SUKSES ===
     if (isSubmitted) {
         return (
-            <div className="min-h-screen w-full bg-[#0a0a0a] text-gray-200 flex items-center justify-center p-6 font-sans">
-                <Head><title>Evaluasi Selesai</title></Head>
+            <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex items-center justify-center p-6 font-sans">
+                <Head><title>Evaluasi Selesai — Spatio-Temporal Analysis Engine</title></Head>
                 <div className="text-center max-w-md animate-fade-in">
-                    <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">Data Berhasil Disimpan</h1>
-                    <p className="text-gray-400 mb-8 leading-relaxed">Terima kasih atas partisipasi Anda. Data evaluasi telah berhasil direkam untuk keperluan analisis penelitian.</p>
-                    <a href="/" className="px-8 py-3.5 bg-white text-black rounded-xl font-bold hover:bg-gray-200 hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-block">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-6">
+                        <Check size={32} className="text-emerald-600" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">Data Berhasil Disimpan</h1>
+                    <p className="text-slate-500 text-sm mb-8 leading-relaxed">Terima kasih atas partisipasi Anda. Data evaluasi telah berhasil direkam untuk keperluan analisis penelitian.</p>
+                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-xl font-semibold text-sm hover:bg-slate-900 transition-colors no-underline shadow-lg">
+                        <ArrowLeft size={16} />
                         Kembali ke Halaman Utama
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
     }
 
+    // === HALAMAN EVALUASI ===
     return (
-        <div className="min-h-screen w-full bg-[#0a0a0a] text-gray-200 flex flex-col items-center py-8 px-4 font-sans selection:bg-neutral-800">
+        <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex flex-col items-center py-6 md:py-8 px-4 font-sans selection:bg-slate-200">
             <Head>
-                <title>Instrumen Evaluasi UEQ</title>
+                <title>Instrumen Evaluasi UEQ — Spatio-Temporal Analysis Engine</title>
+                <meta name="description" content="Instrumen evaluasi pengalaman pengguna (UEQ) untuk aplikasi analisis LST dan NDVI wilayah Bali." />
             </Head>
 
-            <div className="w-full max-w-4xl bg-[#111111] border border-neutral-800/80 rounded-2xl md:rounded-3xl shadow-2xl p-5 md:p-10">
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 modal-backdrop" onClick={() => setShowConfirmModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-sm w-full animate-fade-in" onClick={e => e.stopPropagation()}>
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle size={24} className="text-slate-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 text-center mb-2">Konfirmasi Pengiriman</h3>
+                        <p className="text-sm text-slate-500 text-center mb-6 leading-relaxed">
+                            Anda yakin ingin menyimpan data evaluasi? Data yang sudah dikirim tidak dapat diubah.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowConfirmModal(false)}
+                                className="flex-1 py-2.5 text-sm font-semibold text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={submitEvaluasi}
+                                className="flex-1 py-2.5 text-sm font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors cursor-pointer"
+                            >
+                                Ya, Simpan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-sm p-5 md:p-10">
 
                 {/* Header */}
-                <div className="border-b border-neutral-800/80 pb-6 mb-8">
-                    <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-4">
+                <div className="border-b border-slate-200 pb-6 mb-8">
+                    <div className="flex flex-col md:flex-row justify-between md:items-start gap-4 mb-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Evaluasi Pengalaman Pengguna</h1>
-                            <p className="text-gray-400 text-sm mt-2">Berikan penilaian yang paling merepresentasikan pengalaman Anda.</p>
+                            <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors no-underline mb-3">
+                                <ArrowLeft size={12} />
+                                Kembali ke Peta
+                            </Link>
+                            <div className="flex items-center gap-2.5 mb-2">
+                                <Activity size={20} className="text-slate-800" />
+                                <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Evaluasi Pengalaman Pengguna</h1>
+                            </div>
+                            <p className="text-slate-500 text-sm">Berikan penilaian yang paling merepresentasikan pengalaman Anda.</p>
                         </div>
-                        <div className="self-start md:self-auto">
-                            <span className="text-xs md:text-sm font-mono text-gray-300 bg-neutral-800 px-4 py-2 rounded-full border border-neutral-700">
-                                Langkah {currentCategoryIndex + 1} dari {totalCategories}
+                        <div className="flex flex-col items-start md:items-end gap-2 self-start md:self-auto">
+                            <span className="text-xs font-mono text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                Langkah {currentCategoryIndex + 1} / {totalCategories}
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                {totalAnswered}/{totalQuestions} item terisi
                             </span>
                         </div>
                     </div>
 
-                    <div className="w-full bg-neutral-900 h-2 rounded-full overflow-hidden mt-2">
+                    {/* Global progress bar */}
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
                         <div
-                            className="bg-white h-full transition-all duration-500 ease-out"
+                            className="bg-slate-800 h-full transition-all duration-500 ease-out rounded-full"
                             style={{ width: `${((currentCategoryIndex + 1) / totalCategories) * 100}%` }}
                         ></div>
                     </div>
 
-                    {/* Judul Kategori di Tengah */}
-                    <div className="mt-8 mb-2 text-center">
-                        <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
-                            {currentCategory.title}
-                        </h2>
-                        <p className="text-neutral-400 text-sm mt-1">
-                            Fokus penilaian pada aspek {currentCategory.title.toLowerCase()} aplikasi
-                        </p>
+                    {/* Category title & progress */}
+                    <div className="mt-6 mb-2">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight">
+                                    {currentCategory.title}
+                                </h2>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    {currentCategory.description}
+                                </p>
+                            </div>
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full transition-colors ${isCategoryComplete ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                {answeredInCategory}/{totalInCategory}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Panel Penilaian Serentak - Formal dan Sejajar */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 bg-neutral-800/40 p-4 md:p-5 rounded-xl border border-neutral-700 mb-6 shadow-sm">
-                    <span className="w-full md:w-1/4 text-center md:text-right text-sm md:text-base font-medium text-gray-300">
+                {/* Quick Fill Panel */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 bg-slate-50 p-4 md:p-5 rounded-xl border border-slate-200 mb-6">
+                    <span className="w-full md:w-1/4 text-center md:text-right text-sm font-medium text-slate-500">
                         Penilaian Serentak
                     </span>
 
@@ -212,9 +289,9 @@ export default function Evaluasi() {
                             <button
                                 key={`quick-${num}`}
                                 onClick={() => handleQuickFill(num)}
-                                className="touch-manipulation outline-none"
+                                className="touch-manipulation outline-none cursor-pointer"
                             >
-                                <div className="relative w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border border-neutral-600 bg-neutral-800 text-gray-300 text-sm md:text-base font-bold flex items-center justify-center hover:bg-neutral-700 hover:text-white transition-all duration-200 active:scale-95">
+                                <div className="relative w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border border-slate-200 bg-white text-slate-600 text-sm md:text-base font-bold flex items-center justify-center hover:bg-slate-100 hover:border-slate-300 transition-all duration-200 active:scale-95">
                                     {num}
                                 </div>
                             </button>
@@ -224,113 +301,111 @@ export default function Evaluasi() {
                     <span className="w-full md:w-1/4 hidden md:block"></span>
                 </div>
 
-                {/* Daftar Pertanyaan */}
-                <div className="space-y-4 md:space-y-5">
-                    {currentCategory.items.map((item, index) => (
-                        <div
-                            key={`${currentCategory.id}-${item.id}`}
-                            className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 bg-neutral-900/50 p-4 md:p-5 rounded-xl border border-neutral-800 hover:border-neutral-700 transition-colors animate-fade-in"
-                            style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                            <span className="w-full md:w-1/4 text-center md:text-right text-sm md:text-base font-medium text-gray-300">
-                                {item.left}
-                            </span>
+                {/* Question Items */}
+                <div className="space-y-3 md:space-y-4">
+                    {currentCategory.items.map((item, index) => {
+                        const isAnswered = answers[item.id] !== undefined;
+                        return (
+                            <div
+                                key={`${currentCategory.id}-${item.id}`}
+                                className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 p-4 md:p-5 rounded-xl border transition-all duration-200 animate-fade-in ${isAnswered ? 'bg-white border-slate-200' : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'}`}
+                                style={{ animationDelay: `${index * 50}ms` }}
+                            >
+                                <span className="w-full md:w-1/4 text-center md:text-right text-sm font-medium text-slate-500">
+                                    {item.left}
+                                </span>
 
-                            <div className="flex justify-center w-full md:w-auto space-x-1.5 md:space-x-3">
-                                {[1, 2, 3, 4, 5, 6, 7].map((num) => {
-                                    const isSelected = answers[item.id] === num;
-                                    return (
-                                        <button
-                                            key={num}
-                                            onClick={() => handleSelect(item.id, num)}
-                                            className="touch-manipulation outline-none"
-                                        >
-                                            <div className={`
-                                                relative w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border text-sm md:text-base font-bold flex items-center justify-center transition-all duration-200 select-none
-                                                ${isSelected
-                                                    ? 'bg-white text-black border-transparent scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10'
-                                                    : 'bg-[#1a1a1a] border-neutral-700 text-gray-400 hover:border-gray-400 hover:text-gray-200 active:scale-95'
-                                                }
-                                            `}>
-                                                {num}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                <div className="flex justify-center w-full md:w-auto space-x-1.5 md:space-x-3">
+                                    {[1, 2, 3, 4, 5, 6, 7].map((num) => {
+                                        const isSelected = answers[item.id] === num;
+                                        return (
+                                            <button
+                                                key={num}
+                                                onClick={() => handleSelect(item.id, num)}
+                                                className="touch-manipulation outline-none cursor-pointer"
+                                            >
+                                                <div className={`
+                                                    relative w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border text-sm md:text-base font-bold flex items-center justify-center transition-all duration-200 select-none
+                                                    ${isSelected
+                                                        ? 'bg-slate-800 text-white border-slate-800 scale-110 shadow-lg z-10'
+                                                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600 active:scale-95'
+                                                    }
+                                                `}>
+                                                    {num}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <span className="w-full md:w-1/4 text-center md:text-left text-sm font-medium text-slate-500">
+                                    {item.right}
+                                </span>
                             </div>
-
-                            <span className="w-full md:w-1/4 text-center md:text-left text-sm md:text-base font-medium text-gray-300">
-                                {item.right}
-                            </span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
-                {/* Notifikasi Error (Hanya muncul jika ada error) */}
+                {/* Error Notification */}
                 {errorMessage && (
-                    <div className="mt-8 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start md:items-center gap-3 animate-fade-in">
-                        <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 md:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-sm text-red-200 leading-relaxed">{errorMessage}</p>
+                    <div className="mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start md:items-center gap-3 animate-fade-in">
+                        <AlertCircle size={18} className="text-rose-500 flex-shrink-0 mt-0.5 md:mt-0" />
+                        <p className="text-sm text-rose-600 leading-relaxed font-medium">{errorMessage}</p>
                     </div>
                 )}
 
-                {/* Navigasi Manual */}
-                <div className="mt-8 pt-6 border-t border-neutral-800 flex flex-col-reverse md:flex-row justify-between items-center gap-4">
+                {/* Navigation */}
+                <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col-reverse md:flex-row justify-between items-center gap-4">
                     <button
                         disabled={currentCategoryIndex === 0}
                         onClick={handlePrevCategory}
-                        className="w-full md:w-auto px-6 py-3.5 text-sm md:text-base font-medium text-gray-400 hover:text-white hover:bg-neutral-800 rounded-xl disabled:opacity-0 transition-all"
+                        className="w-full md:w-auto px-5 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl disabled:opacity-0 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
+                        <ChevronLeft size={16} />
                         Kembali
                     </button>
 
                     {currentCategoryIndex === totalCategories - 1 ? (
                         <button
                             disabled={!isCategoryComplete || isSubmitting}
-                            onClick={submitEvaluasi}
-                            className={`w-full md:w-auto px-8 py-3.5 text-sm md:text-base font-bold rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2
+                            onClick={handleSubmitClick}
+                            className={`w-full md:w-auto px-8 py-3 text-sm font-bold rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 cursor-pointer
                                 ${isCategoryComplete
-                                    ? 'bg-white text-black hover:scale-[1.02] shadow-white/20'
-                                    : 'bg-neutral-800 text-gray-600 cursor-not-allowed shadow-none'
+                                    ? 'bg-slate-800 text-white hover:bg-slate-900 shadow-slate-300'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                                 }`}
                         >
                             {isSubmitting ? (
                                 <>
-                                    <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     Menyimpan Data...
                                 </>
-                            ) : 'Simpan Data'}
+                            ) : (
+                                <>
+                                    <Check size={16} />
+                                    Simpan Data
+                                </>
+                            )}
                         </button>
                     ) : (
                         <button
                             disabled={!isCategoryComplete}
                             onClick={handleNextCategory}
-                            className={`w-full md:w-auto px-8 py-3.5 text-sm md:text-base font-bold rounded-xl transition-all duration-300 shadow-lg
+                            className={`w-full md:w-auto px-8 py-3 text-sm font-bold rounded-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 cursor-pointer
                                 ${isCategoryComplete
-                                    ? 'bg-white text-black hover:scale-[1.02] shadow-white/20'
-                                    : 'bg-neutral-800 text-gray-600 cursor-not-allowed shadow-none'
+                                    ? 'bg-slate-800 text-white hover:bg-slate-900 shadow-slate-300'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                                 }`}
                         >
                             Selanjutnya
+                            <ChevronRight size={16} />
                         </button>
                     )}
                 </div>
             </div>
-
-            <style jsx global>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(8px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-fade-in {
-                    animation: fadeIn 0.4s ease-out forwards;
-                }
-            `}</style>
         </div>
     );
 }
