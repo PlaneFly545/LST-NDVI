@@ -307,15 +307,27 @@ export default async function handler(req, res) {
       bestEffort: true,
     });
 
-    const timeSeriesList = dualCollection.limit(50).map((img) =>
-      ee.Feature(null, {
-        date_millis: img.date().millis(),
-        value: img.reduceRegion({
+    // Agregasi tahunan: 1 titik per tahun agar tren tidak terpotong oleh limit citra
+    const startYear = startDateObj.getUTCFullYear();
+    const endYear = endDateObj.getUTCFullYear();
+    const years = ee.List.sequence(startYear, endYear);
+
+    const timeSeriesList = ee.FeatureCollection(
+      years.map((year) => {
+        const yearStart = ee.Date.fromYMD(year, 1, 1);
+        const yearEnd = ee.Date.fromYMD(ee.Number(year).add(1), 1, 1);
+        const yearCollection = dualCollection.filterDate(yearStart, yearEnd);
+        const yearMean = yearCollection.mean();
+        const yearValue = yearMean.reduceRegion({
           reducer: ee.Reducer.mean(),
           geometry,
           scale: 500,
           bestEffort: true,
-        }).get(mainBand),
+        }).get(mainBand);
+        return ee.Feature(null, {
+          date_millis: yearStart.millis(),
+          value: yearValue,
+        });
       })
     );
 

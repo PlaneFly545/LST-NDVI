@@ -284,6 +284,7 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       toast.error('Gagal memproses data. Periksa koneksi dan coba lagi.', { id: toastId });
+    } finally {
       setLoading(false);
     }
   };
