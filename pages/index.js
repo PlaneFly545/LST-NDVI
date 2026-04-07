@@ -6,9 +6,9 @@ import dynamic from 'next/dynamic';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
-  Leaf, ThermometerSun, Activity, Menu, Download,
+  Leaf, ThermometerSun, Activity, Menu, Download, FileDown,
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
-  TrendingUp, History, Square, Columns, Info,
+  TrendingUp, History, Square, Columns, Info, BookOpen,
   PanelLeftOpen, PanelLeftClose, MapPin, X, ClipboardList,
   Satellite, BarChart3
 } from 'lucide-react';
@@ -294,6 +294,36 @@ export default function Home() {
     fetchData();
   };
 
+  // Export data time-series ke CSV
+  const handleExportCSV = () => {
+    const activeChart = visualMode === 'split'
+      ? (activeSplitSide === 'left' ? chartData : chartDataRight)
+      : chartData;
+    const activeStats = visualMode === 'split'
+      ? (activeSplitSide === 'left' ? stats : statsRight)
+      : stats;
+
+    if (!activeChart || activeChart.length === 0) {
+      toast.error('Tidak ada data time-series untuk diekspor.');
+      return;
+    }
+
+    const regionLabel = activeStats?.region || region;
+    const layerLabel = layerType.toUpperCase();
+    const unit = layerType === 'lst' ? '°C' : 'Index';
+
+    const header = 'date,value,region,layer_type,unit';
+    const rows = activeChart
+      .filter(d => d.value !== null && d.value !== undefined)
+      .map(d => `${d.date},${Number(d.value).toFixed(4)},${regionLabel},${layerLabel},${unit}`);
+
+    const csvContent = [header, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const fileName = `LST-NDVI_${layerLabel}_${regionLabel}_${activeChart[0]?.date || ''}_${activeChart[activeChart.length-1]?.date || ''}.csv`;
+    saveAs(blob, fileName);
+    toast.success(`Data CSV berhasil diekspor: ${fileName}`);
+  };
+
   // Kalkulasi Tren Regresi Linear yang dinamis menerima data apa saja (kiri atau kanan)
   const getTrendLineData = (dataArray) => {
     if (!dataArray || dataArray.length < 2) return null;
@@ -538,6 +568,10 @@ export default function Home() {
           )}
         </div>
         <div className="flex items-center gap-1 md:gap-2">
+          <Link href="/metodologi" className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors no-underline">
+            <BookOpen size={14} />
+            Metodologi
+          </Link>
           <Link href="/evaluasi" className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors no-underline">
             <ClipboardList size={14} />
             Evaluasi UEQ
@@ -828,6 +862,15 @@ export default function Home() {
 
                 {/* DOWNLOAD (HANYA MUNCUL DI MODE TUNGGAL) */}
                 <div className="flex justify-end gap-2 mt-4">
+                  {chartData.length > 0 && visualMode !== 'split' && (
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      className="text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-emerald-100 transition-colors cursor-pointer"
+                    >
+                      <FileDown size={14} /> CSV
+                    </button>
+                  )}
                   {tiffUrl && visualMode !== 'split' && (
                     <a href={tiffUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-slate-200 transition-colors no-underline cursor-pointer">
                       <Download size={14} /> GeoTIFF

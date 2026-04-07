@@ -1,6 +1,7 @@
 // pages/api/map-layer.js
 import ee from '@google/earthengine';
 import baliGeoJSON from '../../public/data/bali_kabkota.json';
+import crypto from 'crypto';
 
 const ALLOWED_TYPES = new Set(['lst', 'ndvi']);
 const ALLOWED_MODES = new Set(['history', 'prediksi']);
@@ -11,6 +12,36 @@ const MIN_ALLOWED_DATE = new Date('2013-01-01T00:00:00.000Z');
 const REQUEST_TIMEOUT_MS = 120_000; // 2 menit — GEE bisa memakan 30-120 detik untuk wilayah besar
 const TIMEOUT_ERROR_TAG = 'GEE_TIMEOUT';
 const MAX_QUERY_SIZE_BYTES = 2048;
+
+// ── GEE Cache ──────────────────────────────────────────────────────────────
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 jam
+/** @type {Map<string, { ts: number, data: object }>} */
+const geeCache = new Map();
+
+function buildCacheKey(params) {
+  const sorted = Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('&');
+  return crypto.createHash('sha256').update(sorted).digest('hex');
+}
+
+function getCached(key) {
+  const entry = geeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    geeCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  // Batasi ukuran cache maksimal 200 entri (pencegahan memory leak)
+  if (geeCache.size >= 200) {
+    const oldestKey = geeCache.keys().next().value;
+    geeCache.delete(oldestKey);
+  }
+  geeCache.set(key, { ts: Date.now(), data });
+}
+// ───────────────────────────────────────────────────────────────────────────
 
 let geeAuthPromise = null;
 
@@ -194,6 +225,22 @@ export default async function handler(req, res) {
     const defaultThreshold = normalizedType === 'ndvi' ? 0.5 : 30.0;
     const parsedThreshold = Number.parseFloat(String(threshold ?? `${defaultThreshold}`));
     const thresholdVal = Number.isNaN(parsedThreshold) ? defaultThreshold : parsedThreshold;
+
+    // ── Cache Check ──────────────────────────────────────────────────────────
+    const cacheKey = buildCacheKey({
+      type: normalizedType, mode: normalizedMode, reducer: normalizedReducer,
+      gap_fill: normalizedGapFill, region: normalizedRegion,
+      start_date: startDateInput, end_date: endDateInput,
+      cloud_cover: cloudThreshold, target_year: clampedTargetYear,
+      vis_min: visMin, vis_max: visMax, threshold: thresholdVal,
+    });
+    const cached = getCached(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.status(200).json(cached);
+    }
+    res.setHeader('X-Cache', 'MISS');
+    // ────────────────────────────────────────────────────────────────────────
 
     await authenticate();
 
@@ -399,7 +446,7 @@ export default async function handler(req, res) {
 
     const areaHa = (impactRaw[mainBand] || 0) / 10000;
 
-    return res.status(200).json({
+    const responsePayload = {
       map: mapId,
       stats: {
         mean: statsRaw[`${mainBand}_mean`] || 0,
@@ -416,7 +463,12 @@ export default async function handler(req, res) {
       chart: sortedChartData,
       scatter: scatterData,
       downloadUrl,
-    });
+    };
+
+    // Simpan ke cache sebelum dikirim
+    setCache(cacheKey, responsePayload);
+
+    return res.status(200).json(responsePayload);
   } catch (error) {
     safeErrorLog('GEE Error (sanitized response):', {
       name: error?.name,
