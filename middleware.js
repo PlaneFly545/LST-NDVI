@@ -1,8 +1,8 @@
 // middleware.js
 // Security middleware: Bot UA blocking + Enhanced fingerprint rate limiting.
-// Turnstile verification is handled per-endpoint in the API handler (needs async fetch).
+// Uses Web Crypto API (crypto.subtle) — compatible with Next.js Edge Runtime.
+// Turnstile verification is handled per-endpoint in the API handler.
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 menit
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -29,23 +29,22 @@ function getClientIp(request) {
 }
 
 /**
- * Build a fingerprint from IP + User-Agent + Accept-Language.
- * Much harder to bypass than IP alone because it requires
- * matching all three values simultaneously.
+ * Build a fingerprint using Web Crypto API (SubtleCrypto).
+ * This is the Edge Runtime-compatible equivalent of Node.js crypto.createHash().
+ * The `crypto` global here refers to the Web Crypto API, NOT Node.js crypto module.
  */
-function buildFingerprint(ip, ua, lang) {
-  return crypto
-    .createHash('sha256')
-    .update(`${ip}:${ua}:${lang}`)
-    .digest('hex')
-    .slice(0, 16);
+async function buildFingerprint(ip, ua, lang) {
+  const text = `${ip}:${ua}:${lang}`;
+  const encoded = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
-export function middleware(request) {
+export async function middleware(request) {
   const ua = request.headers.get('user-agent') || '';
 
   // ── 1. Bot User-Agent Blocking ──────────────────────────────────────────
-  // Reject empty UA or known bot/CLI patterns
   if (!ua.trim() || BOT_UA_PATTERNS.some((p) => p.test(ua))) {
     return NextResponse.json(
       { error: 'Akses tidak diizinkan.' },
@@ -56,7 +55,7 @@ export function middleware(request) {
   // ── 2. Fingerprint Rate Limiting ────────────────────────────────────────
   const ip   = getClientIp(request);
   const lang = request.headers.get('accept-language') || '';
-  const fp   = buildFingerprint(ip, ua, lang);
+  const fp   = await buildFingerprint(ip, ua, lang);
   const now  = Date.now();
 
   const record = requestStore.get(fp);
