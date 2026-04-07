@@ -4,6 +4,7 @@ import { authenticate, withTimeout, TIMEOUT_ERROR_TAG } from '../../lib/gee/auth
 import { buildCacheKey, getCached, setCache } from '../../lib/gee/cache';
 import { parseQueryParams, safeErrorLog } from '../../lib/validators/queryParams';
 import { resolveGeometry, buildDualCollection, buildFinalImage, runGeeEvaluation } from '../../lib/gee/compute';
+import { verifyTurnstileToken } from '../../lib/validators/turnstile';
 
 const REQUEST_TIMEOUT_MS = 120_000; // 2 menit
 
@@ -18,6 +19,14 @@ export default async function handler(req, res) {
     const params = parseQueryParams(req.query);
     if (params.error) {
       return res.status(params.status).json({ error: params.error });
+    }
+
+    // ── 1b. Cloudflare Turnstile Verification ───────────────────────────────
+    const turnstileToken = req.headers['cf-turnstile-token'];
+    const clientIp = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const turnstileValid = await verifyTurnstileToken(turnstileToken, clientIp);
+    if (!turnstileValid) {
+      return res.status(403).json({ error: 'Verifikasi keamanan gagal. Silakan muat ulang halaman dan coba lagi.' });
     }
 
     const {

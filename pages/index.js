@@ -1,6 +1,7 @@
 // pages/index.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import DatePicker from "react-datepicker";
@@ -112,6 +113,31 @@ export default function Home() {
 
   const landsatMinDate = new Date('2013-01-01');
 
+  // ── Cloudflare Turnstile ────────────────────────────────────────────────
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileRef = useRef(null);
+  const widgetIdRef = useRef(null);
+
+  const initTurnstile = useCallback(() => {
+    if (!window.turnstile || !turnstileRef.current || widgetIdRef.current) return;
+    widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      callback: (token) => setTurnstileToken(token),
+      'expired-callback': () => setTurnstileToken(null),
+      'error-callback': () => setTurnstileToken(null),
+      appearance: 'interaction-only',
+      size: 'invisible',
+    });
+  }, []);
+
+  const resetTurnstile = useCallback(() => {
+    if (widgetIdRef.current && window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current);
+    }
+    setTurnstileToken(null);
+  }, []);
+  // ────────────────────────────────────────────────────────────────────────
+
   // Helper: title case display for region names
   const toTitleCase = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
@@ -205,9 +231,14 @@ export default function Home() {
         });
 
         const [resLeft, resRight] = await Promise.all([
-          fetch(`/api/map-layer?${paramsLeft}`),
-          fetch(`/api/map-layer?${paramsRight}`)
+          fetch(`/api/map-layer?${paramsLeft}`, {
+            headers: { 'CF-Turnstile-Token': turnstileToken || '' },
+          }),
+          fetch(`/api/map-layer?${paramsRight}`, {
+            headers: { 'CF-Turnstile-Token': turnstileToken || '' },
+          }),
         ]);
+        resetTurnstile();
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!resLeft.ok || !resRight.ok) {
@@ -254,7 +285,10 @@ export default function Home() {
           gap_fill: gapFill // BARU: Parameter gap_fill
         });
 
-        const res = await fetch(`/api/map-layer?${params}`);
+        const res = await fetch(`/api/map-layer?${params}`, {
+          headers: { 'CF-Turnstile-Token': turnstileToken || '' },
+        });
+        resetTurnstile();
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!res.ok) {
@@ -554,6 +588,14 @@ export default function Home() {
       </Head>
       <Toaster position="top-center" />
 
+      {/* Cloudflare Turnstile — invisible bot protection */}
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+        onLoad={initTurnstile}
+      />
+      <div ref={turnstileRef} className="hidden" aria-hidden="true" />
+
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -791,7 +833,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-sm font-bold text-slate-400 mb-1">Belum Ada Data</h3>
                   <p className="text-xs text-slate-400 leading-relaxed max-w-65">
-                    Konfigurasi parameter di atas, lalu tekan tombol <span className="font-semibold text-slate-500">"Proses Data"</span> untuk memulai analisis geospasial.
+                    Konfigurasi parameter di atas, lalu tekan tombol <span className="font-semibold text-slate-500">&quot;Proses Data&quot;</span> untuk memulai analisis geospasial.
                   </p>
                 </div>
               </div>
