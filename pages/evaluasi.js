@@ -149,9 +149,15 @@ export default function Evaluasi() {
         setErrorMessage(null);
 
         try {
+            // Validasi akhir yang ketat sebelum dikirim ke Supabase
             const payload = {};
             for (let i = 1; i <= 26; i++) {
-                payload[`item_${i}`] = answers[i] || null;
+                const val = answers[i];
+                // Pastikan nilai ada, integer, dan di antara 1-7
+                if (val === undefined || val === null || !Number.isInteger(val) || val < 1 || val > 7) {
+                    throw new Error("Terdapat data kuesioner yang tidak valid. Mohon isi semua pertanyaan dengan nilai 1-7.");
+                }
+                payload[`item_${i}`] = val;
             }
 
             const { error } = await supabase
