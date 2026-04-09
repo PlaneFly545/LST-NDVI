@@ -585,7 +585,7 @@ export default function Home() {
         <title>Spatio-Temporal Analysis Engine — LST & NDVI Bali</title>
         <meta name="description" content="Analisis spasio-temporal Land Surface Temperature (LST) dan Normalized Difference Vegetation Index (NDVI) wilayah Bali menggunakan data Landsat 8/9 via Google Earth Engine." />
       </Head>
-      <Toaster position="top-center" />
+      <Toaster position="bottom-center" />
 
       {/* Cloudflare Turnstile — invisible bot protection */}
       <Script
@@ -637,7 +637,7 @@ export default function Home() {
         {/* Mobile sidebar backdrop */}
         {isSidebarOpen && (
           <div
-            className="md:hidden fixed inset-0 z-40 sidebar-backdrop"
+            className="md:hidden fixed inset-0 z-[2500] sidebar-backdrop"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -645,7 +645,7 @@ export default function Home() {
         <aside className={`
           flex flex-col bg-white transition-all duration-300 border-r border-slate-200
           ${isSidebarOpen
-            ? 'fixed md:relative inset-y-0 left-0 z-50 md:z-auto w-[85vw] sm:w-95 md:w-105 animate-slide-in-left md:animate-none'
+            ? 'fixed md:relative inset-y-0 left-0 z-[3000] md:z-auto w-[85vw] sm:w-95 md:w-105 animate-slide-in-left md:animate-none shadow-2xl md:shadow-none'
             : 'w-0 border-none overflow-hidden'
           }
         `}>
@@ -940,17 +940,6 @@ export default function Home() {
         <div className="relative flex-1 bg-slate-100 flex">
           <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
           {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
-
-          {/* Floating sidebar toggle (visible when sidebar is closed) */}
-          {!isSidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="absolute top-4 left-4 z-1000 bg-white/95 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-slate-200/50 hover:bg-white hover:shadow-xl transition-all cursor-pointer group"
-              aria-label="Buka panel kontrol"
-            >
-              <PanelLeftOpen size={18} className="text-slate-500 group-hover:text-slate-800 transition-colors" />
-            </button>
-          )}
 
 
         </div>
