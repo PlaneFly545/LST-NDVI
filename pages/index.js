@@ -37,15 +37,15 @@ const MapLegend = ({ type, min, max }) => {
     : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
 
   return (
-    <div className="absolute bottom-6 right-6 z-1000 bg-white/90 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-64">
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-xs font-semibold text-slate-600">
+    <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-[2000] bg-white/90 backdrop-blur-md p-2.5 md:p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-[70vw] max-w-[200px] md:max-w-none md:w-64">
+      <div className="flex items-center justify-between mb-1.5 md:mb-2.5">
+        <span className="text-[10px] md:text-xs font-semibold text-slate-600 truncate mr-2">
           {type === 'ndvi' ? 'NDVI' : 'Suhu Permukaan'}
         </span>
-        <span className="px-2 py-0.5 text-[10px] bg-slate-100 rounded text-slate-500">Landsat 8/9</span>
+        <span className="px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] bg-slate-100 rounded text-slate-500 whitespace-nowrap">Landsat 8/9</span>
       </div>
-      <div className="w-full h-2 mb-2 rounded-full" style={{ background: gradient }}></div>
-      <div className="flex justify-between text-[11px] text-slate-500">
+      <div className="w-full h-1.5 md:h-2 mb-1.5 md:mb-2 rounded-full" style={{ background: gradient }}></div>
+      <div className="flex justify-between text-[10px] md:text-[11px] text-slate-500">
         <span>{min}</span>
         <span>{((min + max) / 2).toFixed(1)}</span>
         <span>{max}</span>
@@ -522,8 +522,8 @@ export default function Home() {
           <span className="text-[13px] font-semibold text-slate-600">Grafik Analitik</span>
           {isSplit && (
             <div className="absolute right-0 flex bg-slate-100 p-0.5 rounded-md">
-              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta Kiri</button>
-              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta Kanan</button>
+              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta 1</button>
+              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta 2</button>
             </div>
           )}
         </div>
@@ -706,7 +706,7 @@ export default function Home() {
 
                 <div className="mb-4">
                   <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                    {visualMode === 'split' ? 'Periode Historis (Kiri)' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline)' : 'Rentang Tanggal')}
+                    {visualMode === 'split' ? 'Periode Historis Peta 1' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline)' : 'Rentang Tanggal')}
                   </span>
                   <div className="flex items-center gap-2">
                     <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
@@ -717,7 +717,7 @@ export default function Home() {
 
                 {visualMode === 'split' && (
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode Historis (Kanan)</span>
+                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode Historis Peta 2</span>
                     <div className="flex items-center gap-2">
                       <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                       <span className="text-slate-300 text-sm">—</span>
@@ -851,7 +851,7 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-3">
                       {/* Blok Statistik Kiri */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Periode Kiri</div>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Data Peta 1</div>
                         <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
                           <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
                           <span className="text-lg font-bold text-slate-800">{stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span></span>
@@ -864,7 +864,7 @@ export default function Home() {
 
                       {/* Blok Statistik Kanan */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Periode Kanan</div>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Data Peta 2</div>
                         <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
                           <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
                           <span className="text-lg font-bold text-slate-800">{statsRight.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{statsRight.unit}</span></span>
@@ -879,7 +879,7 @@ export default function Home() {
                     {/* Blok Kesimpulan / Selisih */}
                     <div className="mt-3 p-4 bg-slate-800 text-white rounded-xl shadow-md relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                      <span className="text-[11px] text-slate-300 mb-2 block">Perubahan (Kanan − Kiri)</span>
+                      <span className="text-[11px] text-slate-300 mb-2 block">Perubahan (Peta 2 − Peta 1)</span>
                       <div className="flex justify-between items-end">
                         <div>
                           <span className="text-xs text-slate-400 block mb-0.5">Selisih Rata-rata</span>

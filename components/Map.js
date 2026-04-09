@@ -58,16 +58,36 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
   const [viewState, setViewState] = useState({ center: [-8.409518, 115.188919], zoom: 9 });
 
   // State untuk Draggable Split Screen
-  const [splitPos, setSplitPos] = useState(50); // Persentase lebar pembatas (0 - 100)
+  const [splitPos, setSplitPos] = useState(50); // Persentase pembatas (0 - 100)
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef(null);
 
+  // Deteksi Mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Logika Drag & Drop Pembatas
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMove = (e) => {
       if (!isDragging || !containerRef.current) return;
+      
+      // Ambil kordinat client tergantung event (Mouse atau Touch)
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
       const rect = containerRef.current.getBoundingClientRect();
-      let newPos = ((e.clientX - rect.left) / rect.width) * 100;
+      
+      let newPos;
+      if (isMobile) {
+        newPos = ((clientY - rect.top) / rect.height) * 100;
+      } else {
+        newPos = ((clientX - rect.left) / rect.width) * 100;
+      }
 
       // Batasi agar tidak bablas keluar layar (minimal 5%, maksimal 95%)
       if (newPos < 5) newPos = 5;
@@ -76,29 +96,38 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
       setSplitPos(newPos);
     };
 
-    const handleMouseUp = () => {
+    const handleUp = () => {
       setIsDragging(false);
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleUp);
+      window.addEventListener('touchmove', handleMove, { passive: false });
+      window.addEventListener('touchend', handleUp);
+      // Mencegah scrolling layer background di HP saat sliding split
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleUp);
+      document.body.style.overflow = '';
     };
-  }, [isDragging]);
+  }, [isDragging, isMobile]);
 
   if (isSplit) {
     return (
       <div
         ref={containerRef}
-        className={`flex w-full h-full relative bg-slate-100 ${isDragging ? 'cursor-col-resize select-none' : ''}`}
+        className={`flex w-full h-full relative bg-slate-100 ${isMobile ? 'flex-col' : 'flex-row'} ${isDragging ? (isMobile ? 'cursor-row-resize select-none' : 'cursor-col-resize select-none') : ''}`}
       >
-        {/* Peta Kiri */}
-        <div style={{ width: `${splitPos}%` }} className="h-full relative z-10 border-r-[3px] border-slate-800">
+        {/* Peta 1 (Kiri di Desktop, Atas di Mobile) */}
+        <div style={isMobile ? { height: `${splitPos}%`, width: '100%' } : { width: `${splitPos}%`, height: '100%' }} className={`relative z-10 border-slate-800 ${isMobile ? 'border-b-[3px]' : 'border-r-[3px]'}`}>
           <MapContainer center={viewState.center} zoom={viewState.zoom} style={{ height: "100%", width: "100%" }} zoomControl={false}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -109,12 +138,12 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider">
-            Periode Kiri
+            {isMobile ? 'Atas (Periode Kiri)' : 'Periode Kiri'}
           </div>
         </div>
 
-        {/* Peta Kanan */}
-        <div style={{ width: `${100 - splitPos}%` }} className="h-full relative">
+        {/* Peta 2 (Kanan di Desktop, Bawah di Mobile) */}
+        <div style={isMobile ? { height: `${100 - splitPos}%`, width: '100%' } : { width: `${100 - splitPos}%`, height: '100%' }} className="relative">
           <MapContainer center={viewState.center} zoom={viewState.zoom} style={{ height: "100%", width: "100%" }} zoomControl={true}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -124,29 +153,38 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
             {mapUrlRight && <TileLayerUpdater url={mapUrlRight} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
-          <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider">
-            Periode Kanan
+          <div className={`absolute z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}>
+            {isMobile ? 'Bawah (Periode Kanan)' : 'Periode Kanan'}
           </div>
         </div>
 
         {/* Ornamen Pembatas Tengah (Draggable Handle) */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 z-[2000] w-8 h-12 bg-slate-800 rounded shadow-lg flex items-center justify-center cursor-col-resize hover:bg-slate-700 transition-colors"
-          style={{ left: `calc(${splitPos}% - 16px)` }} // 16px adalah setengah dari w-8 (32px)
+          className={`absolute z-[2000] bg-slate-800 rounded shadow-lg flex items-center justify-center hover:bg-slate-700 transition-colors 
+            ${isMobile 
+              ? 'cursor-row-resize h-8 w-12 left-1/2 -translate-x-1/2' 
+              : 'cursor-col-resize w-8 h-12 top-1/2 -translate-y-1/2'
+            }`}
+          style={isMobile ? { top: `calc(${splitPos}% - 16px)` } : { left: `calc(${splitPos}% - 16px)` }}
           onMouseDown={(e) => {
             e.preventDefault();
             setIsDragging(true);
           }}
+          onTouchStart={(e) => {
+             // For mobile drag
+             e.stopPropagation(); // prevent map panning
+             setIsDragging(true);
+          }}
         >
-          <div className="flex gap-0.5 pointer-events-none">
-            <div className="w-0.5 h-5 bg-slate-300 rounded-full"></div>
-            <div className="w-0.5 h-5 bg-slate-300 rounded-full"></div>
-            <div className="w-0.5 h-5 bg-slate-300 rounded-full"></div>
+          <div className={`flex pointer-events-none ${isMobile ? 'flex-col gap-[3px]' : 'gap-0.5'}`}>
+            <div className={`${isMobile ? 'w-6 h-0.5' : 'w-0.5 h-5'} bg-slate-300 rounded-full`}></div>
+            <div className={`${isMobile ? 'w-6 h-0.5' : 'w-0.5 h-5'} bg-slate-300 rounded-full`}></div>
+            <div className={`${isMobile ? 'w-6 h-0.5' : 'w-0.5 h-5'} bg-slate-300 rounded-full`}></div>
           </div>
         </div>
 
         {/* Overlay tak terlihat saat drag agar interaksi mouse tidak tersangkut di dalam peta iframe */}
-        {isDragging && <div className="absolute inset-0 z-[1500] cursor-col-resize"></div>}
+        {isDragging && <div className={`absolute inset-0 z-[1500] ${isMobile ? 'cursor-row-resize' : 'cursor-col-resize'}`}></div>}
       </div>
     );
   }
