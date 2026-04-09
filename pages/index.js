@@ -593,8 +593,12 @@ export default function Home() {
         strategy="afterInteractive"
         onLoad={initTurnstile}
       />
-      {/* Container harus ter-render (bukan display:none) agar widget bisa init */}
-      <div ref={turnstileRef} style={{ position: 'absolute', opacity: 0, height: 0, width: 0, overflow: 'hidden' }} aria-hidden="true" />
+      {/* Container untuk Turnstile: Tetap 'invisible' kecuali jika Cloudflare butuh interaksi (karena mode interaction-only) */}
+      <div 
+        ref={turnstileRef} 
+        className="fixed bottom-4 left-4 z-[9999]"
+        aria-hidden="true" 
+      />
 
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
