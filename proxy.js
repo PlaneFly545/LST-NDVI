@@ -1,5 +1,5 @@
-// middleware.js
-// Security middleware: Bot UA blocking + Enhanced fingerprint rate limiting.
+// proxy.js
+// Security proxy: Bot UA blocking + Enhanced fingerprint rate limiting.
 // Uses Web Crypto API (crypto.subtle) — compatible with Next.js Edge Runtime.
 // Turnstile verification is handled per-endpoint in the API handler.
 import { NextResponse } from 'next/server';
@@ -41,7 +41,7 @@ async function buildFingerprint(ip, ua, lang) {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
-export async function middleware(request) {
+export async function proxy(request) {
   const ua = request.headers.get('user-agent') || '';
 
   // ── 1. Bot User-Agent Blocking ──────────────────────────────────────────
