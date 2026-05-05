@@ -113,29 +113,6 @@ export default function Home() {
 
   const landsatMinDate = new Date('2013-01-01');
 
-  // ── Cloudflare Turnstile ────────────────────────────────────────────────
-  const [turnstileToken, setTurnstileToken] = useState(null);
-  const turnstileRef = useRef(null);
-  const widgetIdRef = useRef(null);
-
-  const initTurnstile = useCallback(() => {
-    if (!window.turnstile || !turnstileRef.current || widgetIdRef.current) return;
-    widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
-      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-      callback: (token) => setTurnstileToken(token),
-      'expired-callback': () => setTurnstileToken(null),
-      'error-callback': () => setTurnstileToken(null),
-      appearance: 'interaction-only', // hanya tampilkan UI jika ada challenge
-    });
-  }, []);
-
-  const resetTurnstile = useCallback(() => {
-    if (widgetIdRef.current && window.turnstile) {
-      window.turnstile.reset(widgetIdRef.current);
-    }
-    setTurnstileToken(null);
-  }, []);
-  // ────────────────────────────────────────────────────────────────────────
 
   // Helper: title case display for region names
   const toTitleCase = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -230,14 +207,9 @@ export default function Home() {
         });
 
         const [resLeft, resRight] = await Promise.all([
-          fetch(`/api/map-layer?${paramsLeft}`, {
-            headers: { 'CF-Turnstile-Token': turnstileToken || '' },
-          }),
-          fetch(`/api/map-layer?${paramsRight}`, {
-            headers: { 'CF-Turnstile-Token': turnstileToken || '' },
-          }),
+          fetch(`/api/map-layer?${paramsLeft}`),
+          fetch(`/api/map-layer?${paramsRight}`),
         ]);
-        resetTurnstile();
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!resLeft.ok || !resRight.ok) {
@@ -284,10 +256,7 @@ export default function Home() {
           gap_fill: gapFill // BARU: Parameter gap_fill
         });
 
-        const res = await fetch(`/api/map-layer?${params}`, {
-          headers: { 'CF-Turnstile-Token': turnstileToken || '' },
-        });
-        resetTurnstile();
+        const res = await fetch(`/api/map-layer?${params}`);
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!res.ok) {
@@ -587,18 +556,6 @@ export default function Home() {
       </Head>
       <Toaster position="bottom-center" />
 
-      {/* Cloudflare Turnstile — invisible bot protection */}
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        strategy="afterInteractive"
-        onLoad={initTurnstile}
-      />
-      {/* Container untuk Turnstile: Tetap 'invisible' kecuali jika Cloudflare butuh interaksi (karena mode interaction-only) */}
-      <div 
-        ref={turnstileRef} 
-        className="fixed bottom-4 left-4 z-[9999]"
-        aria-hidden="true" 
-      />
 
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
