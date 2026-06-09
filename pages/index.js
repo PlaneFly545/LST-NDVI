@@ -1,5 +1,6 @@
 // pages/index.js
 import { useState, useEffect, useRef, useCallback } from 'react';
+import TourOverlay, { TourTriggerButton } from '../components/TourOverlay';
 import Head from 'next/head';
 import Script from 'next/script';
 import Link from 'next/link';
@@ -11,7 +12,7 @@ import {
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
   TrendingUp, History, Square, Columns, Info, BookOpen,
   PanelLeftOpen, PanelLeftClose, MapPin, X, ClipboardList,
-  Satellite, BarChart3
+  Satellite, BarChart3, BellRing
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -102,11 +103,85 @@ export default function Home() {
   const [analysisMode, setAnalysisMode] = useState('history');
   const [chartMode, setChartMode] = useState('trend');
 
+  // Modal Evaluasi UEQ
+  const [showUeqModal, setShowUeqModal] = useState(false);
+
   const currentYear = new Date().getFullYear();
   const [targetYear, setTargetYear] = useState(currentYear + 5);
 
   // BARU: State untuk metode Gap Filling
   const [gapFill, setGapFill] = useState('none');
+
+  // ── Tour State ──
+  const TOUR_KEY = 'ecomonitor_tour_done';
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [tourStep, setTourStep] = useState(0); // dipakai untuk deteksi step 'process'
+
+  // Cek localStorage di client — tampilkan tour jika belum pernah
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (!localStorage.getItem(TOUR_KEY)) {
+        setIsTourActive(true);
+      }
+
+      // Override Leaflet TileLayer secara dinamis di sisi client untuk menyembunyikan label saat demo
+      import('leaflet').then((L) => {
+        if (!L || !L.TileLayer) return;
+        if (L.TileLayer.prototype.__intercepted) return;
+        L.TileLayer.prototype.__intercepted = true;
+        const originalGetTileUrl = L.TileLayer.prototype.getTileUrl;
+        L.TileLayer.prototype.getTileUrl = function (coords) {
+          let url = originalGetTileUrl.call(this, coords);
+          if (typeof window !== 'undefined' && window.__demoActive && url.includes('tile.openstreetmap.org')) {
+            const z = Math.round(coords.z);
+            const x = Math.round(coords.x);
+            const y = Math.round(coords.y);
+            return `https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/${z}/${x}/${y}.png`;
+          }
+          return url;
+        };
+      }).catch(err => console.error('Gagal memuat Leaflet intercept:', err));
+    }
+  }, []);
+
+  const handleTourComplete = () => {
+    setIsTourActive(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOUR_KEY, '1');
+      window.__demoActive = false;
+    }
+    resetData(); // Hapus data/peta placeholder seketika
+  };
+
+  const handleTourReopen = () => {
+    setIsTourActive(true);
+    setTourStep(0);
+  };
+
+  // Handler saat user klik 'Proses Data' di step tour (load demo snapshot)
+  const handleDemoProcess = async () => {
+    if (typeof window !== 'undefined') {
+      window.__demoActive = true;
+    }
+    setLoading(true);
+    toast.dismiss();
+    const toastId = toast.loading('Memuat data...');
+    try {
+      const res = await fetch('/data/demo_snapshot.json');
+      const demo = await res.json();
+      // Gunakan overlay gambar statis lokal untuk demo agar tahan selamanya
+      setMapUrl('/data/bali_lst_heatmap.png');
+      setStats(demo.stats);
+      setChartData(demo.chart || []);
+      setScatterData(demo.scatter || []);
+      if (demo.downloadUrl) setTiffUrl(demo.downloadUrl);
+      toast.success('Selesai.', { id: toastId });
+    } catch {
+      toast.error('Gagal memuat data demo.', { id: toastId });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const regions = ['Seluruh Bali', ...baliData.features.map(f => f.properties.nm_kabkota).sort()];
   const predictionOffsets = [1, 3, 5, 10];
@@ -556,6 +631,25 @@ export default function Home() {
       </Head>
       <Toaster position="bottom-center" />
 
+      {/* Global Style untuk Animasi Lonceng Bergetar */}
+      <style jsx global>{`
+        @keyframes ringing {
+          0% { transform: rotate(0); }
+          10% { transform: rotate(15deg); }
+          20% { transform: rotate(-15deg); }
+          30% { transform: rotate(10deg); }
+          40% { transform: rotate(-10deg); }
+          50% { transform: rotate(5deg); }
+          60% { transform: rotate(-5deg); }
+          70% { transform: rotate(0); }
+          100% { transform: rotate(0); }
+        }
+        .animate-ringing {
+          animation: ringing 2.5s ease-in-out infinite;
+          transform-origin: top center;
+        }
+      `}</style>
+
 
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
@@ -579,6 +673,8 @@ export default function Home() {
             <ClipboardList size={14} />
             Evaluasi UEQ
           </Link>
+          {/* Tombol buka ulang tour */}
+          <TourTriggerButton onClick={handleTourReopen} />
           <button
             type="button"
             onClick={() => setSidebarOpen(!isSidebarOpen)}
@@ -616,33 +712,35 @@ export default function Home() {
           <div className="flex flex-col flex-1 p-4 md:p-6 overflow-y-auto">
 
             {/* Mode Analisis */}
-            <div className="flex bg-slate-100 p-1.5 rounded-lg mb-4">
-              <button onClick={() => handleSwitchMode('history')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                <History size={16} /> Historis
-              </button>
-              {/* PERBAIKAN: Atribut disabled dihapus agar user bisa langsung pindah ke prediksi kapan saja */}
-              <button onClick={() => handleSwitchMode('prediksi')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                <TrendingUp size={16} /> Prediksi
-              </button>
-            </div>
-
-            {/* Mode Visualisasi Layar (Tampil saat Historis) */}
-            {analysisMode === 'history' && (
-              <div className="mb-6">
-                <div className="flex bg-slate-100 p-1.5 rounded-lg">
-                  <button onClick={() => handleVisualModeChange('tunggal')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'tunggal' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
-                    <Square size={16} /> Tunggal
-                  </button>
-                  <button onClick={() => handleVisualModeChange('split')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'split' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
-                    <Columns size={16} /> Komparasi (Split)
-                  </button>
-                </div>
+            <div id="tour-mode-toggle">
+              <div className="flex bg-slate-100 p-1.5 rounded-lg mb-4">
+                <button onClick={() => handleSwitchMode('history')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+                  <History size={16} /> Historis
+                </button>
+                {/* PERBAIKAN: Atribut disabled dihapus agar user bisa langsung pindah ke prediksi kapan saja */}
+                <button onClick={() => handleSwitchMode('prediksi')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+                  <TrendingUp size={16} /> Prediksi
+                </button>
               </div>
-            )}
+
+              {/* Mode Visualisasi Layar (Tampil saat Historis) */}
+              {analysisMode === 'history' && (
+                <div className="mb-6">
+                  <div className="flex bg-slate-100 p-1.5 rounded-lg">
+                    <button onClick={() => handleVisualModeChange('tunggal')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'tunggal' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                      <Square size={16} /> Tunggal
+                    </button>
+                    <button onClick={() => handleVisualModeChange('split')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'split' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                      <Columns size={16} /> Komparasi (Split)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-5">
               {/* Konfigurasi Dasar */}
-              <div>
+              <div id="tour-scenario">
                 <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Skenario Pemodelan</span>
 
                 {analysisMode === 'prediksi' && (
@@ -695,7 +793,7 @@ export default function Home() {
               </div>
 
               {/* Parameter Lingkungan */}
-              <div className="pt-4 border-t border-slate-100">
+              <div id="tour-parameter" className="pt-4 border-t border-slate-100">
                 <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Parameter Lingkungan</span>
 
                 <div className="flex gap-2 mb-4">
@@ -767,7 +865,13 @@ export default function Home() {
                 </div>
               )}
 
-              <button type="button" onClick={handleProcess} disabled={loading} className="w-full py-3 mt-2 text-sm font-semibold text-white transition-all rounded-xl bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]">
+              <button
+                id="tour-process-btn"
+                type="button"
+                onClick={handleProcess}
+                disabled={loading}
+                className="w-full py-3 mt-2 text-sm font-semibold text-white transition-all rounded-xl bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]"
+              >
                 {loading ? <span className="animate-spin">⟳</span> : <Activity size={16} />}
                 {visualMode === 'split' ? 'Proses Komparasi' : (analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data')}
               </button>
@@ -801,7 +905,7 @@ export default function Home() {
             )}
 
             {stats && (
-              <div className="mt-8 pt-6 border-t border-slate-100 animate-fade-in">
+              <div id="tour-result-area" className="mt-8 pt-6 border-t border-slate-100 animate-fade-in">
                 {visualMode === 'split' ? (
                   <>
                     <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Komparasi Statistik</span>
@@ -894,13 +998,77 @@ export default function Home() {
         </aside>
 
         {/* === MAP AREA === */}
-        <div className="relative flex-1 bg-slate-100 flex">
+        <div id="tour-map-area" className="relative flex-1 bg-slate-100 flex">
           <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
           {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
-
-
         </div>
+
+        {/* --- Tombol Lonceng Melayang (FAB) --- */}
+        {!showUeqModal && (
+          <button 
+            onClick={() => setShowUeqModal(true)}
+            className="absolute top-4 right-4 md:top-6 md:right-6 z-[2000] bg-rose-500 text-white p-3.5 md:p-4 rounded-full shadow-lg hover:bg-rose-600 hover:scale-105 transition-all flex items-center justify-center border-4 border-white/40 group"
+            title="Isi Evaluasi UEQ"
+          >
+            <BellRing size={22} className="animate-ringing" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-400"></span>
+            </span>
+          </button>
+        )}
+
+        {/* --- Modal Pop-up Evaluasi UEQ --- */}
+        {showUeqModal && (
+          <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all animate-slide-in-up">
+              <div className="bg-gradient-to-r from-rose-500 to-rose-600 p-5 text-center relative">
+                <button 
+                  onClick={() => setShowUeqModal(false)}
+                  className="absolute top-3 right-3 text-white/70 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Tutup popup"
+                >
+                  <X size={20} />
+                </button>
+                <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <ClipboardList size={32} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">Bantu Kami Berkembang!</h3>
+              </div>
+              <div className="p-6 text-center">
+                <p className="text-[13px] text-slate-600 mb-6 leading-relaxed">
+                  Luangkan waktu <b className="text-rose-600">1-2 menit</b> saja untuk mengisi kuesioner Evaluasi Pengalaman Pengguna (UEQ). Masukan Anda sangat berharga untuk kelancaran penelitian skripsi ini.
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowUeqModal(false)}
+                    className="flex-1 py-2.5 text-sm font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Nanti Saja
+                  </button>
+                  <Link 
+                    href="/evaluasi"
+                    onClick={() => setShowUeqModal(false)}
+                    className="flex-1 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-md hover:shadow-lg transition-all no-underline block"
+                  >
+                    Isi Sekarang
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
+
+      {/* ── Tour Overlay ── */}
+      {isTourActive && (
+        <TourOverlay
+          onTourComplete={handleTourComplete}
+          onDemoProcess={handleDemoProcess}
+          onStepChange={setTourStep}
+        />
+      )}
     </div>
   );
 }

@@ -1,12 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, useMapEvents, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
 
-// Helper: Update layer gambar dari GEE
-function TileLayerUpdater({ url }) {
+// Helper: Update layer gambar dari GEE (TileLayer) atau ImageOverlay lokal untuk demo
+function MapLayer({ url }) {
   const map = useMap();
-  return url ? <TileLayer url={url} attribution="Google Earth Engine" /> : null;
+  if (!url) return null;
+
+  const isStaticImage = url.endsWith('.png') || url.endsWith('.webp') || url.includes('/data/') || url.includes('/images/');
+  if (isStaticImage) {
+    // Koordinat batas (bounds) Bali untuk overlay gambar
+    const baliBounds = [
+      [-8.85, 114.43], // Sudut barat daya (South-West)
+      [-8.06, 115.71]  // Sudut timur laut (North-East)
+    ];
+    return <ImageOverlay url={url} bounds={baliBounds} opacity={0.75} attribution="EcoMonitor Demo Data" />;
+  }
+
+  return <TileLayer url={url} attribution="Google Earth Engine" />;
 }
 
 // Helper: Auto-Focus kamera ke wilayah terpilih
@@ -134,7 +146,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
               attribution='&copy; OpenStreetMap contributors'
             />
             {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
-            {mapUrl && <TileLayerUpdater url={mapUrl} />}
+            {mapUrl && <MapLayer url={mapUrl} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider">
@@ -150,7 +162,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
               attribution='&copy; OpenStreetMap contributors'
             />
             {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
-            {mapUrlRight && <TileLayerUpdater url={mapUrlRight} />}
+            {mapUrlRight && <MapLayer url={mapUrlRight} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className={`absolute z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}>
@@ -205,7 +217,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
       {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
 
       {/* Layer GEE */}
-      {mapUrl && <TileLayerUpdater url={mapUrl} />}
+      {mapUrl && <MapLayer url={mapUrl} />}
     </MapContainer>
   );
 };

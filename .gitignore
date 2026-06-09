@@ -42,3 +42,6 @@ next-env.d.ts
 
 # implementation plan
 implementation_plan.md
+
+# Claude config
+.claude/

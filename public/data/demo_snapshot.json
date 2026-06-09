@@ -1,0 +1,2977 @@
+{
+  "_note": "Auto-generated. Jalankan ulang scripts/generate-demo-snapshot.js untuk refresh tile URL (berlaku ~24 jam).",
+  "_generated_at": "2026-06-09T05:20:11.107Z",
+  "map": {
+    "mapid": "projects/earthengine-legacy/maps/d67ea0110e8601bd577d6610295bf176-5c3077cd59301fc341dec8a5ad8764f4",
+    "token": "",
+    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/d67ea0110e8601bd577d6610295bf176-5c3077cd59301fc341dec8a5ad8764f4/tiles/{z}/{x}/{y}",
+    "image": {
+      "func": {
+        "signature_": {
+          "args": [
+            {
+              "description": "The image to select bands from.",
+              "type": "Image",
+              "name": "input",
+              "default": null
+            },
+            {
+              "description": "A list of names, regexes, or numeric indices specifying the bands to select.",
+              "type": "List",
+              "name": "bandSelectors",
+              "default": null
+            },
+            {
+              "description": "Optional new names for the output bands. Must match the number of bands selected.",
+              "type": "List",
+              "name": "newNames",
+              "default": null,
+              "optional": true
+            }
+          ],
+          "description": "Selects bands from an image by name, RE2-compatible regex, or index and optionally renames them.",
+          "returns": "Image",
+          "name": "Image.select"
+        }
+      },
+      "args": {
+        "input": {
+          "func": {
+            "signature_": {
+              "args": [
+                {
+                  "description": "The image to clip.",
+                  "type": "Image",
+                  "name": "input",
+                  "default": null
+                },
+                {
+                  "description": "The Geometry or Feature to clip to.",
+                  "type": "Object",
+                  "name": "geometry",
+                  "default": null
+                }
+              ],
+              "description": "Clips an image to a Geometry or Feature (use clipToCollection to clip an image to a FeatureCollection). The output bands correspond exactly to the input bands, except data not covered by the geometry is masked. The output image retains the metadata of the input image. ",
+              "returns": "Image",
+              "name": "Image.clip"
+            }
+          },
+          "args": {
+            "input": {
+              "func": {
+                "signature_": {
+                  "args": [
+                    {
+                      "description": "The image collection to reduce.",
+                      "type": "ImageCollection",
+                      "name": "collection",
+                      "default": null
+                    }
+                  ],
+                  "description": "Reduces an image collection by calculating the median of all values at each pixel across the stack of all matching bands. Bands are matched by name.",
+                  "returns": "Image",
+                  "name": "reduce.median"
+                }
+              },
+              "args": {
+                "collection": {
+                  "func": {
+                    "signature_": {
+                      "args": [
+                        {
+                          "description": "The collection of the elements to which the algorithm is applied.",
+                          "type": "FeatureCollection",
+                          "name": "collection",
+                          "default": null
+                        },
+                        {
+                          "description": "The algorithm being applied to each element.",
+                          "type": "Algorithm",
+                          "name": "baseAlgorithm",
+                          "default": null
+                        },
+                        {
+                          "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
+                          "type": "Boolean",
+                          "name": "dropNulls",
+                          "default": false,
+                          "optional": true
+                        }
+                      ],
+                      "description": "Maps an algorithm over a collection.",
+                      "returns": "FeatureCollection",
+                      "name": "Collection.map"
+                    }
+                  },
+                  "args": {
+                    "collection": {
+                      "func": {
+                        "signature_": {
+                          "args": [
+                            {
+                              "description": "The collection of the elements to which the algorithm is applied.",
+                              "type": "FeatureCollection",
+                              "name": "collection",
+                              "default": null
+                            },
+                            {
+                              "description": "The algorithm being applied to each element.",
+                              "type": "Algorithm",
+                              "name": "baseAlgorithm",
+                              "default": null
+                            },
+                            {
+                              "description": "If true, the mapped algorithm is allowed to return nulls, and the elements for which it returns nulls will be dropped.",
+                              "type": "Boolean",
+                              "name": "dropNulls",
+                              "default": false,
+                              "optional": true
+                            }
+                          ],
+                          "description": "Maps an algorithm over a collection.",
+                          "returns": "FeatureCollection",
+                          "name": "Collection.map"
+                        }
+                      },
+                      "args": {
+                        "collection": {
+                          "func": {
+                            "signature_": {
+                              "args": [
+                                {
+                                  "description": "The collection to filter.",
+                                  "type": "FeatureCollection",
+                                  "name": "collection",
+                                  "default": null
+                                },
+                                {
+                                  "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                                  "type": "Object",
+                                  "name": "filter",
+                                  "default": null
+                                }
+                              ],
+                              "description": "Applies a filter to a given collection.",
+                              "returns": "FeatureCollection",
+                              "name": "Collection.filter"
+                            }
+                          },
+                          "args": {
+                            "collection": {
+                              "func": {
+                                "signature_": {
+                                  "args": [
+                                    {
+                                      "description": "The collection to filter.",
+                                      "type": "FeatureCollection",
+                                      "name": "collection",
+                                      "default": null
+                                    },
+                                    {
+                                      "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                                      "type": "Object",
+                                      "name": "filter",
+                                      "default": null
+                                    }
+                                  ],
+                                  "description": "Applies a filter to a given collection.",
+                                  "returns": "FeatureCollection",
+                                  "name": "Collection.filter"
+                                }
+                              },
+                              "args": {
+                                "collection": {
+                                  "func": {
+                                    "signature_": {
+                                      "args": [
+                                        {
+                                          "description": "The collection to filter.",
+                                          "type": "FeatureCollection",
+                                          "name": "collection",
+                                          "default": null
+                                        },
+                                        {
+                                          "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                                          "type": "Object",
+                                          "name": "filter",
+                                          "default": null
+                                        }
+                                      ],
+                                      "description": "Applies a filter to a given collection.",
+                                      "returns": "FeatureCollection",
+                                      "name": "Collection.filter"
+                                    }
+                                  },
+                                  "args": {
+                                    "collection": {
+                                      "func": {
+                                        "signature_": {
+                                          "args": [
+                                            {
+                                              "description": "The asset ID of the image collection.",
+                                              "type": "String",
+                                              "name": "id",
+                                              "default": null
+                                            },
+                                            {
+                                              "description": "The version of the asset. -1 signifies the latest version.",
+                                              "type": "Long",
+                                              "name": "version",
+                                              "default": null,
+                                              "optional": true
+                                            }
+                                          ],
+                                          "description": "Returns the image collection given its ID.",
+                                          "returns": "ImageCollection",
+                                          "name": "ImageCollection.load"
+                                        }
+                                      },
+                                      "args": {
+                                        "id": "LANDSAT/LC08/C02/T1_L2"
+                                      },
+                                      "varName": null,
+                                      "sourceFrame": null
+                                    },
+                                    "filter": {
+                                      "func": {
+                                        "signature_": {
+                                          "args": [
+                                            {
+                                              "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                              "type": "String",
+                                              "name": "leftField",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                              "type": "Object",
+                                              "name": "rightValue",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                              "type": "String",
+                                              "name": "rightField",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                              "type": "Object",
+                                              "name": "leftValue",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "The maximum reprojection error allowed during filter application.",
+                                              "type": "ErrorMargin",
+                                              "name": "maxError",
+                                              "default": {
+                                                "type": "ErrorMargin",
+                                                "unit": "meters",
+                                                "value": 0.1
+                                              },
+                                              "optional": true
+                                            }
+                                          ],
+                                          "description": "Creates a unary or binary filter that passes if the left geometry intersects the right geometry.",
+                                          "returns": "Filter",
+                                          "name": "Filter.intersects"
+                                        }
+                                      },
+                                      "args": {
+                                        "leftField": {
+                                          "func": null,
+                                          "args": null,
+                                          "varName": null,
+                                          "sourceFrame": null,
+                                          "string_": ".all"
+                                        },
+                                        "rightValue": {
+                                          "func": {
+                                            "signature_": {
+                                              "args": [
+                                                {
+                                                  "description": "The geometry of the feature.",
+                                                  "type": "Geometry",
+                                                  "name": "geometry",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "The properties of the feature.",
+                                                  "type": "Dictionary",
+                                                  "name": "metadata",
+                                                  "default": {},
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "Obsolete; has no effect.",
+                                                  "type": "String",
+                                                  "name": "geometryKey",
+                                                  "default": null,
+                                                  "optional": true
+                                                }
+                                              ],
+                                              "description": "Returns a Feature composed of the given geometry and metadata.",
+                                              "returns": "Feature",
+                                              "name": "Feature"
+                                            }
+                                          },
+                                          "args": {
+                                            "geometry": {
+                                              "func": {
+                                                "signature_": {
+                                                  "args": [
+                                                    {
+                                                      "description": "The collection whose geometries will be extracted.",
+                                                      "type": "FeatureCollection",
+                                                      "name": "collection",
+                                                      "default": null
+                                                    },
+                                                    {
+                                                      "description": "An error margin to use when merging geometries.",
+                                                      "type": "ErrorMargin",
+                                                      "name": "maxError",
+                                                      "default": {
+                                                        "type": "ErrorMargin",
+                                                        "unit": "meters",
+                                                        "value": 0
+                                                      },
+                                                      "optional": true
+                                                    }
+                                                  ],
+                                                  "description": "Extracts and merges the geometries of a collection. Requires that all the geometries in the collection share the projection and edge interpretation.\nCaution: providing a large or complex collection as input can result in poor performance. Collating the geometry of collections does not scale well; use the smallest collection that is required to achieve the desired outcome.\nNote: If only a bounding box around the collection is needed, consider using Collection.bounds instead.",
+                                                  "returns": "Geometry",
+                                                  "name": "Collection.geometry"
+                                                }
+                                              },
+                                              "args": {
+                                                "collection": {
+                                                  "func": {
+                                                    "signature_": {
+                                                      "args": [
+                                                        {
+                                                          "description": "The collection to filter.",
+                                                          "type": "FeatureCollection",
+                                                          "name": "collection",
+                                                          "default": null
+                                                        },
+                                                        {
+                                                          "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                                                          "type": "Object",
+                                                          "name": "filter",
+                                                          "default": null
+                                                        }
+                                                      ],
+                                                      "description": "Applies a filter to a given collection.",
+                                                      "returns": "FeatureCollection",
+                                                      "name": "Collection.filter"
+                                                    }
+                                                  },
+                                                  "args": {
+                                                    "collection": {
+                                                      "func": {
+                                                        "signature_": {
+                                                          "args": [
+                                                            {
+                                                              "description": "The asset ID of the table to load.",
+                                                              "type": "String",
+                                                              "name": "tableId",
+                                                              "default": null
+                                                            },
+                                                            {
+                                                              "description": "The name of the column to use as the main feature geometry. Not used if tableId is an asset ID.",
+                                                              "type": "String",
+                                                              "name": "geometryColumn",
+                                                              "default": null,
+                                                              "optional": true
+                                                            },
+                                                            {
+                                                              "description": "The version of the asset. -1 signifies the latest version. Ignored unless tableId is an asset ID.",
+                                                              "type": "Long",
+                                                              "name": "version",
+                                                              "default": -1,
+                                                              "optional": true
+                                                            }
+                                                          ],
+                                                          "description": "Returns a Collection of features from a specified table.",
+                                                          "returns": "FeatureCollection",
+                                                          "name": "Collection.loadTable"
+                                                        }
+                                                      },
+                                                      "args": {
+                                                        "tableId": "FAO/GAUL/2015/level1"
+                                                      },
+                                                      "varName": null,
+                                                      "sourceFrame": null
+                                                    },
+                                                    "filter": {
+                                                      "func": {
+                                                        "signature_": {
+                                                          "args": [
+                                                            {
+                                                              "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                                              "type": "String",
+                                                              "name": "leftField",
+                                                              "default": null,
+                                                              "optional": true
+                                                            },
+                                                            {
+                                                              "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                                              "type": "Object",
+                                                              "name": "rightValue",
+                                                              "default": null,
+                                                              "optional": true
+                                                            },
+                                                            {
+                                                              "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                                              "type": "String",
+                                                              "name": "rightField",
+                                                              "default": null,
+                                                              "optional": true
+                                                            },
+                                                            {
+                                                              "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                                              "type": "Object",
+                                                              "name": "leftValue",
+                                                              "default": null,
+                                                              "optional": true
+                                                            }
+                                                          ],
+                                                          "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                                                          "returns": "Filter",
+                                                          "name": "Filter.equals"
+                                                        }
+                                                      },
+                                                      "args": {
+                                                        "leftField": {
+                                                          "func": null,
+                                                          "args": null,
+                                                          "varName": null,
+                                                          "sourceFrame": null,
+                                                          "string_": "ADM1_NAME"
+                                                        },
+                                                        "rightValue": "Bali"
+                                                      },
+                                                      "varName": null,
+                                                      "sourceFrame": null,
+                                                      "filter_": [
+                                                        {
+                                                          "func": {
+                                                            "signature_": {
+                                                              "args": [
+                                                                {
+                                                                  "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                                                  "type": "String",
+                                                                  "name": "leftField",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                                                  "type": "Object",
+                                                                  "name": "rightValue",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                                                  "type": "String",
+                                                                  "name": "rightField",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                                                  "type": "Object",
+                                                                  "name": "leftValue",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                }
+                                                              ],
+                                                              "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                                                              "returns": "Filter",
+                                                              "name": "Filter.equals"
+                                                            }
+                                                          },
+                                                          "args": {
+                                                            "leftField": {
+                                                              "func": null,
+                                                              "args": null,
+                                                              "varName": null,
+                                                              "sourceFrame": null,
+                                                              "string_": "ADM1_NAME"
+                                                            },
+                                                            "rightValue": "Bali"
+                                                          },
+                                                          "varName": null,
+                                                          "sourceFrame": null
+                                                        }
+                                                      ]
+                                                    }
+                                                  },
+                                                  "varName": null,
+                                                  "sourceFrame": null
+                                                }
+                                              },
+                                              "varName": null,
+                                              "sourceFrame": null
+                                            }
+                                          },
+                                          "varName": null,
+                                          "sourceFrame": null
+                                        }
+                                      },
+                                      "varName": null,
+                                      "sourceFrame": null,
+                                      "filter_": [
+                                        {
+                                          "func": {
+                                            "signature_": {
+                                              "args": [
+                                                {
+                                                  "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                                  "type": "String",
+                                                  "name": "leftField",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                                  "type": "Object",
+                                                  "name": "rightValue",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                                  "type": "String",
+                                                  "name": "rightField",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                                  "type": "Object",
+                                                  "name": "leftValue",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "The maximum reprojection error allowed during filter application.",
+                                                  "type": "ErrorMargin",
+                                                  "name": "maxError",
+                                                  "default": {
+                                                    "type": "ErrorMargin",
+                                                    "unit": "meters",
+                                                    "value": 0.1
+                                                  },
+                                                  "optional": true
+                                                }
+                                              ],
+                                              "description": "Creates a unary or binary filter that passes if the left geometry intersects the right geometry.",
+                                              "returns": "Filter",
+                                              "name": "Filter.intersects"
+                                            }
+                                          },
+                                          "args": {
+                                            "leftField": {
+                                              "func": null,
+                                              "args": null,
+                                              "varName": null,
+                                              "sourceFrame": null,
+                                              "string_": ".all"
+                                            },
+                                            "rightValue": {
+                                              "func": {
+                                                "signature_": {
+                                                  "args": [
+                                                    {
+                                                      "description": "The geometry of the feature.",
+                                                      "type": "Geometry",
+                                                      "name": "geometry",
+                                                      "default": null,
+                                                      "optional": true
+                                                    },
+                                                    {
+                                                      "description": "The properties of the feature.",
+                                                      "type": "Dictionary",
+                                                      "name": "metadata",
+                                                      "default": {},
+                                                      "optional": true
+                                                    },
+                                                    {
+                                                      "description": "Obsolete; has no effect.",
+                                                      "type": "String",
+                                                      "name": "geometryKey",
+                                                      "default": null,
+                                                      "optional": true
+                                                    }
+                                                  ],
+                                                  "description": "Returns a Feature composed of the given geometry and metadata.",
+                                                  "returns": "Feature",
+                                                  "name": "Feature"
+                                                }
+                                              },
+                                              "args": {
+                                                "geometry": {
+                                                  "func": {
+                                                    "signature_": {
+                                                      "args": [
+                                                        {
+                                                          "description": "The collection whose geometries will be extracted.",
+                                                          "type": "FeatureCollection",
+                                                          "name": "collection",
+                                                          "default": null
+                                                        },
+                                                        {
+                                                          "description": "An error margin to use when merging geometries.",
+                                                          "type": "ErrorMargin",
+                                                          "name": "maxError",
+                                                          "default": {
+                                                            "type": "ErrorMargin",
+                                                            "unit": "meters",
+                                                            "value": 0
+                                                          },
+                                                          "optional": true
+                                                        }
+                                                      ],
+                                                      "description": "Extracts and merges the geometries of a collection. Requires that all the geometries in the collection share the projection and edge interpretation.\nCaution: providing a large or complex collection as input can result in poor performance. Collating the geometry of collections does not scale well; use the smallest collection that is required to achieve the desired outcome.\nNote: If only a bounding box around the collection is needed, consider using Collection.bounds instead.",
+                                                      "returns": "Geometry",
+                                                      "name": "Collection.geometry"
+                                                    }
+                                                  },
+                                                  "args": {
+                                                    "collection": {
+                                                      "func": {
+                                                        "signature_": {
+                                                          "args": [
+                                                            {
+                                                              "description": "The collection to filter.",
+                                                              "type": "FeatureCollection",
+                                                              "name": "collection",
+                                                              "default": null
+                                                            },
+                                                            {
+                                                              "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                                                              "type": "Object",
+                                                              "name": "filter",
+                                                              "default": null
+                                                            }
+                                                          ],
+                                                          "description": "Applies a filter to a given collection.",
+                                                          "returns": "FeatureCollection",
+                                                          "name": "Collection.filter"
+                                                        }
+                                                      },
+                                                      "args": {
+                                                        "collection": {
+                                                          "func": {
+                                                            "signature_": {
+                                                              "args": [
+                                                                {
+                                                                  "description": "The asset ID of the table to load.",
+                                                                  "type": "String",
+                                                                  "name": "tableId",
+                                                                  "default": null
+                                                                },
+                                                                {
+                                                                  "description": "The name of the column to use as the main feature geometry. Not used if tableId is an asset ID.",
+                                                                  "type": "String",
+                                                                  "name": "geometryColumn",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "The version of the asset. -1 signifies the latest version. Ignored unless tableId is an asset ID.",
+                                                                  "type": "Long",
+                                                                  "name": "version",
+                                                                  "default": -1,
+                                                                  "optional": true
+                                                                }
+                                                              ],
+                                                              "description": "Returns a Collection of features from a specified table.",
+                                                              "returns": "FeatureCollection",
+                                                              "name": "Collection.loadTable"
+                                                            }
+                                                          },
+                                                          "args": {
+                                                            "tableId": "FAO/GAUL/2015/level1"
+                                                          },
+                                                          "varName": null,
+                                                          "sourceFrame": null
+                                                        },
+                                                        "filter": {
+                                                          "func": {
+                                                            "signature_": {
+                                                              "args": [
+                                                                {
+                                                                  "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                                                  "type": "String",
+                                                                  "name": "leftField",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                                                  "type": "Object",
+                                                                  "name": "rightValue",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                                                  "type": "String",
+                                                                  "name": "rightField",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                },
+                                                                {
+                                                                  "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                                                  "type": "Object",
+                                                                  "name": "leftValue",
+                                                                  "default": null,
+                                                                  "optional": true
+                                                                }
+                                                              ],
+                                                              "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                                                              "returns": "Filter",
+                                                              "name": "Filter.equals"
+                                                            }
+                                                          },
+                                                          "args": {
+                                                            "leftField": {
+                                                              "func": null,
+                                                              "args": null,
+                                                              "varName": null,
+                                                              "sourceFrame": null,
+                                                              "string_": "ADM1_NAME"
+                                                            },
+                                                            "rightValue": "Bali"
+                                                          },
+                                                          "varName": null,
+                                                          "sourceFrame": null,
+                                                          "filter_": [
+                                                            {
+                                                              "func": {
+                                                                "signature_": {
+                                                                  "args": [
+                                                                    {
+                                                                      "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                                                      "type": "String",
+                                                                      "name": "leftField",
+                                                                      "default": null,
+                                                                      "optional": true
+                                                                    },
+                                                                    {
+                                                                      "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                                                      "type": "Object",
+                                                                      "name": "rightValue",
+                                                                      "default": null,
+                                                                      "optional": true
+                                                                    },
+                                                                    {
+                                                                      "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                                                      "type": "String",
+                                                                      "name": "rightField",
+                                                                      "default": null,
+                                                                      "optional": true
+                                                                    },
+                                                                    {
+                                                                      "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                                                      "type": "Object",
+                                                                      "name": "leftValue",
+                                                                      "default": null,
+                                                                      "optional": true
+                                                                    }
+                                                                  ],
+                                                                  "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                                                                  "returns": "Filter",
+                                                                  "name": "Filter.equals"
+                                                                }
+                                                              },
+                                                              "args": {
+                                                                "leftField": {
+                                                                  "func": null,
+                                                                  "args": null,
+                                                                  "varName": null,
+                                                                  "sourceFrame": null,
+                                                                  "string_": "ADM1_NAME"
+                                                                },
+                                                                "rightValue": "Bali"
+                                                              },
+                                                              "varName": null,
+                                                              "sourceFrame": null
+                                                            }
+                                                          ]
+                                                        }
+                                                      },
+                                                      "varName": null,
+                                                      "sourceFrame": null
+                                                    }
+                                                  },
+                                                  "varName": null,
+                                                  "sourceFrame": null
+                                                }
+                                              },
+                                              "varName": null,
+                                              "sourceFrame": null
+                                            }
+                                          },
+                                          "varName": null,
+                                          "sourceFrame": null
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "varName": null
+                                },
+                                "filter": {
+                                  "func": {
+                                    "signature_": {
+                                      "args": [
+                                        {
+                                          "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                          "type": "String",
+                                          "name": "leftField",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                          "type": "Object",
+                                          "name": "rightValue",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                          "type": "String",
+                                          "name": "rightField",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                          "type": "Object",
+                                          "name": "leftValue",
+                                          "default": null,
+                                          "optional": true
+                                        }
+                                      ],
+                                      "description": "Creates a unary or binary filter that passes if the left operand, a date range, contains the right operand, a date.",
+                                      "returns": "Filter",
+                                      "name": "Filter.dateRangeContains"
+                                    }
+                                  },
+                                  "args": {
+                                    "rightField": {
+                                      "func": null,
+                                      "args": null,
+                                      "varName": null,
+                                      "sourceFrame": null,
+                                      "string_": "system:time_start"
+                                    },
+                                    "leftValue": {
+                                      "func": {
+                                        "signature_": {
+                                          "args": [
+                                            {
+                                              "description": "",
+                                              "type": "Object",
+                                              "name": "start",
+                                              "default": null
+                                            },
+                                            {
+                                              "description": "",
+                                              "type": "Object",
+                                              "name": "end",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "If start and/or end are provided as strings, the time zone in which to interpret them; defaults to UTC.",
+                                              "type": "String",
+                                              "name": "timeZone",
+                                              "default": null,
+                                              "optional": true
+                                            }
+                                          ],
+                                          "description": "Creates a DateRange with the given start (inclusive) and end (exclusive), which may be Dates, numbers (interpreted as milliseconds since 1970-01-01T00:00:00Z), or strings (such as '1996-01-01T08:00'). If 'end' is not specified, a 1-millisecond range starting at 'start' is created.",
+                                          "returns": "DateRange",
+                                          "name": "DateRange",
+                                          "isConstructor": true
+                                        }
+                                      },
+                                      "args": {
+                                        "start": "2014-01-01",
+                                        "end": "2024-12-31"
+                                      },
+                                      "varName": null,
+                                      "sourceFrame": null
+                                    }
+                                  },
+                                  "varName": null,
+                                  "sourceFrame": null,
+                                  "filter_": [
+                                    {
+                                      "func": {
+                                        "signature_": {
+                                          "args": [
+                                            {
+                                              "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                              "type": "String",
+                                              "name": "leftField",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                              "type": "Object",
+                                              "name": "rightValue",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                              "type": "String",
+                                              "name": "rightField",
+                                              "default": null,
+                                              "optional": true
+                                            },
+                                            {
+                                              "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                              "type": "Object",
+                                              "name": "leftValue",
+                                              "default": null,
+                                              "optional": true
+                                            }
+                                          ],
+                                          "description": "Creates a unary or binary filter that passes if the left operand, a date range, contains the right operand, a date.",
+                                          "returns": "Filter",
+                                          "name": "Filter.dateRangeContains"
+                                        }
+                                      },
+                                      "args": {
+                                        "rightField": {
+                                          "func": null,
+                                          "args": null,
+                                          "varName": null,
+                                          "sourceFrame": null,
+                                          "string_": "system:time_start"
+                                        },
+                                        "leftValue": {
+                                          "func": {
+                                            "signature_": {
+                                              "args": [
+                                                {
+                                                  "description": "",
+                                                  "type": "Object",
+                                                  "name": "start",
+                                                  "default": null
+                                                },
+                                                {
+                                                  "description": "",
+                                                  "type": "Object",
+                                                  "name": "end",
+                                                  "default": null,
+                                                  "optional": true
+                                                },
+                                                {
+                                                  "description": "If start and/or end are provided as strings, the time zone in which to interpret them; defaults to UTC.",
+                                                  "type": "String",
+                                                  "name": "timeZone",
+                                                  "default": null,
+                                                  "optional": true
+                                                }
+                                              ],
+                                              "description": "Creates a DateRange with the given start (inclusive) and end (exclusive), which may be Dates, numbers (interpreted as milliseconds since 1970-01-01T00:00:00Z), or strings (such as '1996-01-01T08:00'). If 'end' is not specified, a 1-millisecond range starting at 'start' is created.",
+                                              "returns": "DateRange",
+                                              "name": "DateRange",
+                                              "isConstructor": true
+                                            }
+                                          },
+                                          "args": {
+                                            "start": "2014-01-01",
+                                            "end": "2024-12-31"
+                                          },
+                                          "varName": null,
+                                          "sourceFrame": null
+                                        }
+                                      },
+                                      "varName": null,
+                                      "sourceFrame": null
+                                    }
+                                  ]
+                                }
+                              },
+                              "varName": null
+                            },
+                            "filter": {
+                              "func": {
+                                "signature_": {
+                                  "args": [
+                                    {
+                                      "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                      "type": "String",
+                                      "name": "leftField",
+                                      "default": null,
+                                      "optional": true
+                                    },
+                                    {
+                                      "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                      "type": "Object",
+                                      "name": "rightValue",
+                                      "default": null,
+                                      "optional": true
+                                    },
+                                    {
+                                      "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                      "type": "String",
+                                      "name": "rightField",
+                                      "default": null,
+                                      "optional": true
+                                    },
+                                    {
+                                      "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                      "type": "Object",
+                                      "name": "leftValue",
+                                      "default": null,
+                                      "optional": true
+                                    }
+                                  ],
+                                  "description": "Creates a unary or binary filter that passes if the left operand is less than the right operand.",
+                                  "returns": "Filter",
+                                  "name": "Filter.lessThan"
+                                }
+                              },
+                              "args": {
+                                "leftField": {
+                                  "func": null,
+                                  "args": null,
+                                  "varName": null,
+                                  "sourceFrame": null,
+                                  "string_": "CLOUD_COVER"
+                                },
+                                "rightValue": 30
+                              },
+                              "varName": null,
+                              "sourceFrame": null,
+                              "filter_": [
+                                {
+                                  "func": {
+                                    "signature_": {
+                                      "args": [
+                                        {
+                                          "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                          "type": "String",
+                                          "name": "leftField",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                          "type": "Object",
+                                          "name": "rightValue",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                          "type": "String",
+                                          "name": "rightField",
+                                          "default": null,
+                                          "optional": true
+                                        },
+                                        {
+                                          "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                          "type": "Object",
+                                          "name": "leftValue",
+                                          "default": null,
+                                          "optional": true
+                                        }
+                                      ],
+                                      "description": "Creates a unary or binary filter that passes if the left operand is less than the right operand.",
+                                      "returns": "Filter",
+                                      "name": "Filter.lessThan"
+                                    }
+                                  },
+                                  "args": {
+                                    "leftField": {
+                                      "func": null,
+                                      "args": null,
+                                      "varName": null,
+                                      "sourceFrame": null,
+                                      "string_": "CLOUD_COVER"
+                                    },
+                                    "rightValue": 30
+                                  },
+                                  "varName": null,
+                                  "sourceFrame": null
+                                }
+                              ]
+                            }
+                          },
+                          "varName": null
+                        },
+                        "baseAlgorithm": {
+                          "signature_": {
+                            "name": "",
+                            "returns": "Object",
+                            "args": [
+                              {
+                                "name": "_MAPPING_VAR_0_0",
+                                "type": "Object"
+                              }
+                            ]
+                          },
+                          "body_": {
+                            "func": {
+                              "signature_": {
+                                "args": [
+                                  {
+                                    "description": "Input image.",
+                                    "type": "Image",
+                                    "name": "image",
+                                    "default": null
+                                  },
+                                  {
+                                    "description": "New mask for the image, as a floating-point value in the range [0, 1] (invalid = 0, valid = 1). If this image has a single band, it is used for all bands in the input image; otherwise, must have the same number of bands as the input image.",
+                                    "type": "Image",
+                                    "name": "mask",
+                                    "default": null
+                                  }
+                                ],
+                                "description": "Updates an image's mask at all positions where the existing mask is not zero. The output image retains the metadata and footprint of the input image.",
+                                "returns": "Image",
+                                "name": "Image.updateMask"
+                              }
+                            },
+                            "args": {
+                              "image": {
+                                "func": null,
+                                "args": null,
+                                "varName": "_MAPPING_VAR_0_0",
+                                "sourceFrame": null
+                              },
+                              "mask": {
+                                "func": {
+                                  "signature_": {
+                                    "args": [
+                                      {
+                                        "description": "The image from which the left operand bands are taken.",
+                                        "type": "Image",
+                                        "name": "image1",
+                                        "default": null
+                                      },
+                                      {
+                                        "description": "The image from which the right operand bands are taken.",
+                                        "type": "Image",
+                                        "name": "image2",
+                                        "default": null
+                                      }
+                                    ],
+                                    "description": "Returns 1 if and only if both values are non-zero for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is boolean.",
+                                    "returns": "Image",
+                                    "name": "Image.and"
+                                  }
+                                },
+                                "args": {
+                                  "image1": {
+                                    "func": {
+                                      "signature_": {
+                                        "args": [
+                                          {
+                                            "description": "The image from which the left operand bands are taken.",
+                                            "type": "Image",
+                                            "name": "image1",
+                                            "default": null
+                                          },
+                                          {
+                                            "description": "The image from which the right operand bands are taken.",
+                                            "type": "Image",
+                                            "name": "image2",
+                                            "default": null
+                                          }
+                                        ],
+                                        "description": "Returns 1 if and only if the first value is equal to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is boolean.",
+                                        "returns": "Image",
+                                        "name": "Image.eq"
+                                      }
+                                    },
+                                    "args": {
+                                      "image1": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The image from which the left operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image1",
+                                                "default": null
+                                              },
+                                              {
+                                                "description": "The image from which the right operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image2",
+                                                "default": null
+                                              }
+                                            ],
+                                            "description": "Calculates the bitwise AND of the input values for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                            "returns": "Image",
+                                            "name": "Image.bitwiseAnd"
+                                          }
+                                        },
+                                        "args": {
+                                          "image1": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The image to select bands from.",
+                                                    "type": "Image",
+                                                    "name": "input",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "A list of names, regexes, or numeric indices specifying the bands to select.",
+                                                    "type": "List",
+                                                    "name": "bandSelectors",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "Optional new names for the output bands. Must match the number of bands selected.",
+                                                    "type": "List",
+                                                    "name": "newNames",
+                                                    "default": null,
+                                                    "optional": true
+                                                  }
+                                                ],
+                                                "description": "Selects bands from an image by name, RE2-compatible regex, or index and optionally renames them.",
+                                                "returns": "Image",
+                                                "name": "Image.select"
+                                              }
+                                            },
+                                            "args": {
+                                              "input": {
+                                                "func": null,
+                                                "args": null,
+                                                "varName": "_MAPPING_VAR_0_0",
+                                                "sourceFrame": null
+                                              },
+                                              "bandSelectors": {
+                                                "func": null,
+                                                "args": null,
+                                                "varName": null,
+                                                "sourceFrame": null,
+                                                "list_": [
+                                                  "QA_PIXEL"
+                                                ]
+                                              }
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          },
+                                          "image2": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                    "type": "Object",
+                                                    "name": "value",
+                                                    "default": null
+                                                  }
+                                                ],
+                                                "description": "Generates an image containing a constant value everywhere.",
+                                                "returns": "Image",
+                                                "name": "Image.constant"
+                                              }
+                                            },
+                                            "args": {
+                                              "value": 8
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          }
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      },
+                                      "image2": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                "type": "Object",
+                                                "name": "value",
+                                                "default": null
+                                              }
+                                            ],
+                                            "description": "Generates an image containing a constant value everywhere.",
+                                            "returns": "Image",
+                                            "name": "Image.constant"
+                                          }
+                                        },
+                                        "args": {
+                                          "value": 0
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      }
+                                    },
+                                    "varName": null,
+                                    "sourceFrame": null
+                                  },
+                                  "image2": {
+                                    "func": {
+                                      "signature_": {
+                                        "args": [
+                                          {
+                                            "description": "The image from which the left operand bands are taken.",
+                                            "type": "Image",
+                                            "name": "image1",
+                                            "default": null
+                                          },
+                                          {
+                                            "description": "The image from which the right operand bands are taken.",
+                                            "type": "Image",
+                                            "name": "image2",
+                                            "default": null
+                                          }
+                                        ],
+                                        "description": "Returns 1 if and only if the first value is equal to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is boolean.",
+                                        "returns": "Image",
+                                        "name": "Image.eq"
+                                      }
+                                    },
+                                    "args": {
+                                      "image1": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The image from which the left operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image1",
+                                                "default": null
+                                              },
+                                              {
+                                                "description": "The image from which the right operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image2",
+                                                "default": null
+                                              }
+                                            ],
+                                            "description": "Calculates the bitwise AND of the input values for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                            "returns": "Image",
+                                            "name": "Image.bitwiseAnd"
+                                          }
+                                        },
+                                        "args": {
+                                          "image1": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The image to select bands from.",
+                                                    "type": "Image",
+                                                    "name": "input",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "A list of names, regexes, or numeric indices specifying the bands to select.",
+                                                    "type": "List",
+                                                    "name": "bandSelectors",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "Optional new names for the output bands. Must match the number of bands selected.",
+                                                    "type": "List",
+                                                    "name": "newNames",
+                                                    "default": null,
+                                                    "optional": true
+                                                  }
+                                                ],
+                                                "description": "Selects bands from an image by name, RE2-compatible regex, or index and optionally renames them.",
+                                                "returns": "Image",
+                                                "name": "Image.select"
+                                              }
+                                            },
+                                            "args": {
+                                              "input": {
+                                                "func": null,
+                                                "args": null,
+                                                "varName": "_MAPPING_VAR_0_0",
+                                                "sourceFrame": null
+                                              },
+                                              "bandSelectors": {
+                                                "func": null,
+                                                "args": null,
+                                                "varName": null,
+                                                "sourceFrame": null,
+                                                "list_": [
+                                                  "QA_PIXEL"
+                                                ]
+                                              }
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          },
+                                          "image2": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                    "type": "Object",
+                                                    "name": "value",
+                                                    "default": null
+                                                  }
+                                                ],
+                                                "description": "Generates an image containing a constant value everywhere.",
+                                                "returns": "Image",
+                                                "name": "Image.constant"
+                                              }
+                                            },
+                                            "args": {
+                                              "value": 16
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          }
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      },
+                                      "image2": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                "type": "Object",
+                                                "name": "value",
+                                                "default": null
+                                              }
+                                            ],
+                                            "description": "Generates an image containing a constant value everywhere.",
+                                            "returns": "Image",
+                                            "name": "Image.constant"
+                                          }
+                                        },
+                                        "args": {
+                                          "value": 0
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      }
+                                    },
+                                    "varName": null,
+                                    "sourceFrame": null
+                                  }
+                                },
+                                "varName": null,
+                                "sourceFrame": null
+                              }
+                            },
+                            "varName": null,
+                            "sourceFrame": null
+                          }
+                        }
+                      },
+                      "varName": null
+                    },
+                    "baseAlgorithm": {
+                      "signature_": {
+                        "name": "",
+                        "returns": "Object",
+                        "args": [
+                          {
+                            "name": "_MAPPING_VAR_0_0",
+                            "type": "Object"
+                          }
+                        ]
+                      },
+                      "body_": {
+                        "func": {
+                          "signature_": {
+                            "args": [
+                              {
+                                "description": "The object whose properties to override.",
+                                "type": "Element",
+                                "name": "destination",
+                                "default": null,
+                                "optional": true
+                              },
+                              {
+                                "description": "The object from which to copy the properties.",
+                                "type": "Element",
+                                "name": "source",
+                                "default": null,
+                                "optional": true
+                              },
+                              {
+                                "description": "The properties to copy. If omitted, all ordinary (i.e. non-system) properties are copied.",
+                                "type": "List",
+                                "name": "properties",
+                                "default": null,
+                                "optional": true
+                              },
+                              {
+                                "description": "The list of properties to exclude when copying all properties. Must not be specified if properties is.",
+                                "type": "List",
+                                "name": "exclude",
+                                "default": null,
+                                "optional": true
+                              }
+                            ],
+                            "description": "Copies metadata properties from one element to another.",
+                            "returns": "Element",
+                            "name": "Image.copyProperties"
+                          }
+                        },
+                        "args": {
+                          "destination": {
+                            "func": {
+                              "signature_": {
+                                "args": [
+                                  {
+                                    "description": "An image into which to copy bands.",
+                                    "type": "Image",
+                                    "name": "dstImg",
+                                    "default": null
+                                  },
+                                  {
+                                    "description": "An image containing bands to copy.",
+                                    "type": "Image",
+                                    "name": "srcImg",
+                                    "default": null
+                                  },
+                                  {
+                                    "description": "Optional list of band names to copy. If names is omitted, all bands from srcImg will be copied over.",
+                                    "type": "List",
+                                    "name": "names",
+                                    "default": null,
+                                    "optional": true
+                                  },
+                                  {
+                                    "description": "If true, bands from `srcImg` will override bands with the same names in `dstImg`. Otherwise the new band will be renamed with a numerical suffix (`foo` to `foo_1` unless `foo_1` exists, then `foo_2` unless it exists, etc).",
+                                    "type": "Boolean",
+                                    "name": "overwrite",
+                                    "default": false,
+                                    "optional": true
+                                  }
+                                ],
+                                "description": "Returns an image containing all bands copied from the first input and selected bands from the second input, optionally overwriting bands in the first image with the same name. The new image has the metadata and footprint from the first input image.",
+                                "returns": "Image",
+                                "name": "Image.addBands"
+                              }
+                            },
+                            "args": {
+                              "dstImg": {
+                                "func": null,
+                                "args": null,
+                                "varName": "_MAPPING_VAR_0_0",
+                                "sourceFrame": null
+                              },
+                              "srcImg": {
+                                "func": {
+                                  "signature_": {
+                                    "args": [
+                                      {
+                                        "description": "An image into which to copy bands.",
+                                        "type": "Image",
+                                        "name": "dstImg",
+                                        "default": null
+                                      },
+                                      {
+                                        "description": "An image containing bands to copy.",
+                                        "type": "Image",
+                                        "name": "srcImg",
+                                        "default": null
+                                      },
+                                      {
+                                        "description": "Optional list of band names to copy. If names is omitted, all bands from srcImg will be copied over.",
+                                        "type": "List",
+                                        "name": "names",
+                                        "default": null,
+                                        "optional": true
+                                      },
+                                      {
+                                        "description": "If true, bands from `srcImg` will override bands with the same names in `dstImg`. Otherwise the new band will be renamed with a numerical suffix (`foo` to `foo_1` unless `foo_1` exists, then `foo_2` unless it exists, etc).",
+                                        "type": "Boolean",
+                                        "name": "overwrite",
+                                        "default": false,
+                                        "optional": true
+                                      }
+                                    ],
+                                    "description": "Returns an image containing all bands copied from the first input and selected bands from the second input, optionally overwriting bands in the first image with the same name. The new image has the metadata and footprint from the first input image.",
+                                    "returns": "Image",
+                                    "name": "Image.addBands"
+                                  }
+                                },
+                                "args": {
+                                  "dstImg": {
+                                    "func": {
+                                      "signature_": {
+                                        "args": [
+                                          {
+                                            "description": "The image to select bands from.",
+                                            "type": "Image",
+                                            "name": "input",
+                                            "default": null
+                                          },
+                                          {
+                                            "description": "New names for the image's bands. Must exactly match the number of bands in input.",
+                                            "type": "List",
+                                            "name": "names",
+                                            "default": null
+                                          }
+                                        ],
+                                        "description": "Renames the bands of an image.",
+                                        "returns": "Image",
+                                        "name": "Image.rename"
+                                      }
+                                    },
+                                    "args": {
+                                      "input": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The input image.",
+                                                "type": "Image",
+                                                "name": "input",
+                                                "default": null
+                                              },
+                                              {
+                                                "description": "A list of names specifying the bands to use. If not specified, the first and second bands are used.",
+                                                "type": "List",
+                                                "name": "bandNames",
+                                                "default": null,
+                                                "optional": true
+                                              }
+                                            ],
+                                            "description": "Computes the normalized difference between two bands. If the bands to use are not specified, uses the first two bands. The normalized difference is computed as (first − second) / (first + second).  <p>Note that the returned image band name is 'nd', the input image properties are not retained in the output image, and a negative pixel value in either input band will cause the output pixel to be masked. To avoid masking negative input values, use `ee.Image.expression()` to compute normalized difference. ",
+                                            "returns": "Image",
+                                            "name": "Image.normalizedDifference"
+                                          }
+                                        },
+                                        "args": {
+                                          "input": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The image from which the left operand bands are taken.",
+                                                    "type": "Image",
+                                                    "name": "image1",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "The image from which the right operand bands are taken.",
+                                                    "type": "Image",
+                                                    "name": "image2",
+                                                    "default": null
+                                                  }
+                                                ],
+                                                "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                                "returns": "Image",
+                                                "name": "Image.add"
+                                              }
+                                            },
+                                            "args": {
+                                              "image1": {
+                                                "func": {
+                                                  "signature_": {
+                                                    "args": [
+                                                      {
+                                                        "description": "The image from which the left operand bands are taken.",
+                                                        "type": "Image",
+                                                        "name": "image1",
+                                                        "default": null
+                                                      },
+                                                      {
+                                                        "description": "The image from which the right operand bands are taken.",
+                                                        "type": "Image",
+                                                        "name": "image2",
+                                                        "default": null
+                                                      }
+                                                    ],
+                                                    "description": "Multiplies the first value by the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                                    "returns": "Image",
+                                                    "name": "Image.multiply"
+                                                  }
+                                                },
+                                                "args": {
+                                                  "image1": {
+                                                    "func": {
+                                                      "signature_": {
+                                                        "args": [
+                                                          {
+                                                            "description": "The image to select bands from.",
+                                                            "type": "Image",
+                                                            "name": "input",
+                                                            "default": null
+                                                          },
+                                                          {
+                                                            "description": "A list of names, regexes, or numeric indices specifying the bands to select.",
+                                                            "type": "List",
+                                                            "name": "bandSelectors",
+                                                            "default": null
+                                                          },
+                                                          {
+                                                            "description": "Optional new names for the output bands. Must match the number of bands selected.",
+                                                            "type": "List",
+                                                            "name": "newNames",
+                                                            "default": null,
+                                                            "optional": true
+                                                          }
+                                                        ],
+                                                        "description": "Selects bands from an image by name, RE2-compatible regex, or index and optionally renames them.",
+                                                        "returns": "Image",
+                                                        "name": "Image.select"
+                                                      }
+                                                    },
+                                                    "args": {
+                                                      "input": {
+                                                        "func": null,
+                                                        "args": null,
+                                                        "varName": "_MAPPING_VAR_0_0",
+                                                        "sourceFrame": null
+                                                      },
+                                                      "bandSelectors": {
+                                                        "func": null,
+                                                        "args": null,
+                                                        "varName": null,
+                                                        "sourceFrame": null,
+                                                        "list_": [
+                                                          "SR_B2",
+                                                          "SR_B3",
+                                                          "SR_B4",
+                                                          "SR_B5"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "varName": null,
+                                                    "sourceFrame": null
+                                                  },
+                                                  "image2": {
+                                                    "func": {
+                                                      "signature_": {
+                                                        "args": [
+                                                          {
+                                                            "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                            "type": "Object",
+                                                            "name": "value",
+                                                            "default": null
+                                                          }
+                                                        ],
+                                                        "description": "Generates an image containing a constant value everywhere.",
+                                                        "returns": "Image",
+                                                        "name": "Image.constant"
+                                                      }
+                                                    },
+                                                    "args": {
+                                                      "value": 0.0000275
+                                                    },
+                                                    "varName": null,
+                                                    "sourceFrame": null
+                                                  }
+                                                },
+                                                "varName": null,
+                                                "sourceFrame": null
+                                              },
+                                              "image2": {
+                                                "func": {
+                                                  "signature_": {
+                                                    "args": [
+                                                      {
+                                                        "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                        "type": "Object",
+                                                        "name": "value",
+                                                        "default": null
+                                                      }
+                                                    ],
+                                                    "description": "Generates an image containing a constant value everywhere.",
+                                                    "returns": "Image",
+                                                    "name": "Image.constant"
+                                                  }
+                                                },
+                                                "args": {
+                                                  "value": -0.2
+                                                },
+                                                "varName": null,
+                                                "sourceFrame": null
+                                              }
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          },
+                                          "bandNames": {
+                                            "func": null,
+                                            "args": null,
+                                            "varName": null,
+                                            "sourceFrame": null,
+                                            "list_": [
+                                              "SR_B5",
+                                              "SR_B4"
+                                            ]
+                                          }
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      },
+                                      "names": {
+                                        "func": null,
+                                        "args": null,
+                                        "varName": null,
+                                        "sourceFrame": null,
+                                        "list_": [
+                                          "NDVI"
+                                        ]
+                                      }
+                                    },
+                                    "varName": null,
+                                    "sourceFrame": null
+                                  },
+                                  "srcImg": {
+                                    "func": {
+                                      "signature_": {
+                                        "args": [
+                                          {
+                                            "description": "The image to select bands from.",
+                                            "type": "Image",
+                                            "name": "input",
+                                            "default": null
+                                          },
+                                          {
+                                            "description": "New names for the image's bands. Must exactly match the number of bands in input.",
+                                            "type": "List",
+                                            "name": "names",
+                                            "default": null
+                                          }
+                                        ],
+                                        "description": "Renames the bands of an image.",
+                                        "returns": "Image",
+                                        "name": "Image.rename"
+                                      }
+                                    },
+                                    "args": {
+                                      "input": {
+                                        "func": {
+                                          "signature_": {
+                                            "args": [
+                                              {
+                                                "description": "The image from which the left operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image1",
+                                                "default": null
+                                              },
+                                              {
+                                                "description": "The image from which the right operand bands are taken.",
+                                                "type": "Image",
+                                                "name": "image2",
+                                                "default": null
+                                              }
+                                            ],
+                                            "description": "Subtracts the second value from the first for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                            "returns": "Image",
+                                            "name": "Image.subtract"
+                                          }
+                                        },
+                                        "args": {
+                                          "image1": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The image from which the left operand bands are taken.",
+                                                    "type": "Image",
+                                                    "name": "image1",
+                                                    "default": null
+                                                  },
+                                                  {
+                                                    "description": "The image from which the right operand bands are taken.",
+                                                    "type": "Image",
+                                                    "name": "image2",
+                                                    "default": null
+                                                  }
+                                                ],
+                                                "description": "Adds the first value to the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                                "returns": "Image",
+                                                "name": "Image.add"
+                                              }
+                                            },
+                                            "args": {
+                                              "image1": {
+                                                "func": {
+                                                  "signature_": {
+                                                    "args": [
+                                                      {
+                                                        "description": "The image from which the left operand bands are taken.",
+                                                        "type": "Image",
+                                                        "name": "image1",
+                                                        "default": null
+                                                      },
+                                                      {
+                                                        "description": "The image from which the right operand bands are taken.",
+                                                        "type": "Image",
+                                                        "name": "image2",
+                                                        "default": null
+                                                      }
+                                                    ],
+                                                    "description": "Multiplies the first value by the second for each matched pair of bands in image1 and image2. If either image1 or image2 has only 1 band, then it is used against all the bands in the other image. If the images have the same number of bands, but not the same names, they're used pairwise in the natural order. The output bands are named for the longer of the two inputs, or if they're equal in length, in image1's order. The type of the output pixels is the union of the input types.",
+                                                    "returns": "Image",
+                                                    "name": "Image.multiply"
+                                                  }
+                                                },
+                                                "args": {
+                                                  "image1": {
+                                                    "func": {
+                                                      "signature_": {
+                                                        "args": [
+                                                          {
+                                                            "description": "The image to select bands from.",
+                                                            "type": "Image",
+                                                            "name": "input",
+                                                            "default": null
+                                                          },
+                                                          {
+                                                            "description": "A list of names, regexes, or numeric indices specifying the bands to select.",
+                                                            "type": "List",
+                                                            "name": "bandSelectors",
+                                                            "default": null
+                                                          },
+                                                          {
+                                                            "description": "Optional new names for the output bands. Must match the number of bands selected.",
+                                                            "type": "List",
+                                                            "name": "newNames",
+                                                            "default": null,
+                                                            "optional": true
+                                                          }
+                                                        ],
+                                                        "description": "Selects bands from an image by name, RE2-compatible regex, or index and optionally renames them.",
+                                                        "returns": "Image",
+                                                        "name": "Image.select"
+                                                      }
+                                                    },
+                                                    "args": {
+                                                      "input": {
+                                                        "func": null,
+                                                        "args": null,
+                                                        "varName": "_MAPPING_VAR_0_0",
+                                                        "sourceFrame": null
+                                                      },
+                                                      "bandSelectors": {
+                                                        "func": null,
+                                                        "args": null,
+                                                        "varName": null,
+                                                        "sourceFrame": null,
+                                                        "list_": [
+                                                          "ST_B10"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "varName": null,
+                                                    "sourceFrame": null
+                                                  },
+                                                  "image2": {
+                                                    "func": {
+                                                      "signature_": {
+                                                        "args": [
+                                                          {
+                                                            "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                            "type": "Object",
+                                                            "name": "value",
+                                                            "default": null
+                                                          }
+                                                        ],
+                                                        "description": "Generates an image containing a constant value everywhere.",
+                                                        "returns": "Image",
+                                                        "name": "Image.constant"
+                                                      }
+                                                    },
+                                                    "args": {
+                                                      "value": 0.00341802
+                                                    },
+                                                    "varName": null,
+                                                    "sourceFrame": null
+                                                  }
+                                                },
+                                                "varName": null,
+                                                "sourceFrame": null
+                                              },
+                                              "image2": {
+                                                "func": {
+                                                  "signature_": {
+                                                    "args": [
+                                                      {
+                                                        "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                        "type": "Object",
+                                                        "name": "value",
+                                                        "default": null
+                                                      }
+                                                    ],
+                                                    "description": "Generates an image containing a constant value everywhere.",
+                                                    "returns": "Image",
+                                                    "name": "Image.constant"
+                                                  }
+                                                },
+                                                "args": {
+                                                  "value": 149
+                                                },
+                                                "varName": null,
+                                                "sourceFrame": null
+                                              }
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          },
+                                          "image2": {
+                                            "func": {
+                                              "signature_": {
+                                                "args": [
+                                                  {
+                                                    "description": "The value of the pixels in the constant image. Must be a number or an Array or a list of numbers or Arrays.",
+                                                    "type": "Object",
+                                                    "name": "value",
+                                                    "default": null
+                                                  }
+                                                ],
+                                                "description": "Generates an image containing a constant value everywhere.",
+                                                "returns": "Image",
+                                                "name": "Image.constant"
+                                              }
+                                            },
+                                            "args": {
+                                              "value": 273.15
+                                            },
+                                            "varName": null,
+                                            "sourceFrame": null
+                                          }
+                                        },
+                                        "varName": null,
+                                        "sourceFrame": null
+                                      },
+                                      "names": {
+                                        "func": null,
+                                        "args": null,
+                                        "varName": null,
+                                        "sourceFrame": null,
+                                        "list_": [
+                                          "LST_Celsius"
+                                        ]
+                                      }
+                                    },
+                                    "varName": null,
+                                    "sourceFrame": null
+                                  }
+                                },
+                                "varName": null,
+                                "sourceFrame": null
+                              }
+                            },
+                            "varName": null,
+                            "sourceFrame": null
+                          },
+                          "source": {
+                            "func": null,
+                            "args": null,
+                            "varName": "_MAPPING_VAR_0_0",
+                            "sourceFrame": null
+                          },
+                          "properties": {
+                            "func": null,
+                            "args": null,
+                            "varName": null,
+                            "sourceFrame": null,
+                            "list_": [
+                              "system:time_start"
+                            ]
+                          }
+                        },
+                        "varName": null,
+                        "sourceFrame": null
+                      }
+                    }
+                  },
+                  "varName": null
+                }
+              },
+              "varName": null,
+              "sourceFrame": null
+            },
+            "geometry": {
+              "func": {
+                "signature_": {
+                  "args": [
+                    {
+                      "description": "The collection whose geometries will be extracted.",
+                      "type": "FeatureCollection",
+                      "name": "collection",
+                      "default": null
+                    },
+                    {
+                      "description": "An error margin to use when merging geometries.",
+                      "type": "ErrorMargin",
+                      "name": "maxError",
+                      "default": {
+                        "type": "ErrorMargin",
+                        "unit": "meters",
+                        "value": 0
+                      },
+                      "optional": true
+                    }
+                  ],
+                  "description": "Extracts and merges the geometries of a collection. Requires that all the geometries in the collection share the projection and edge interpretation.\nCaution: providing a large or complex collection as input can result in poor performance. Collating the geometry of collections does not scale well; use the smallest collection that is required to achieve the desired outcome.\nNote: If only a bounding box around the collection is needed, consider using Collection.bounds instead.",
+                  "returns": "Geometry",
+                  "name": "Collection.geometry"
+                }
+              },
+              "args": {
+                "collection": {
+                  "func": {
+                    "signature_": {
+                      "args": [
+                        {
+                          "description": "The collection to filter.",
+                          "type": "FeatureCollection",
+                          "name": "collection",
+                          "default": null
+                        },
+                        {
+                          "description": "The filter to apply to the collection. Either a Filter object or a string to be parsed into a Filter object (e.g., \"property > value\"). Supported operators include: >, >=, <, <=, ==, !=, (), !, &&, ||, as well as 'and', 'or', 'not', and 'in' for inList.",
+                          "type": "Object",
+                          "name": "filter",
+                          "default": null
+                        }
+                      ],
+                      "description": "Applies a filter to a given collection.",
+                      "returns": "FeatureCollection",
+                      "name": "Collection.filter"
+                    }
+                  },
+                  "args": {
+                    "collection": {
+                      "func": {
+                        "signature_": {
+                          "args": [
+                            {
+                              "description": "The asset ID of the table to load.",
+                              "type": "String",
+                              "name": "tableId",
+                              "default": null
+                            },
+                            {
+                              "description": "The name of the column to use as the main feature geometry. Not used if tableId is an asset ID.",
+                              "type": "String",
+                              "name": "geometryColumn",
+                              "default": null,
+                              "optional": true
+                            },
+                            {
+                              "description": "The version of the asset. -1 signifies the latest version. Ignored unless tableId is an asset ID.",
+                              "type": "Long",
+                              "name": "version",
+                              "default": -1,
+                              "optional": true
+                            }
+                          ],
+                          "description": "Returns a Collection of features from a specified table.",
+                          "returns": "FeatureCollection",
+                          "name": "Collection.loadTable"
+                        }
+                      },
+                      "args": {
+                        "tableId": "FAO/GAUL/2015/level1"
+                      },
+                      "varName": null,
+                      "sourceFrame": null
+                    },
+                    "filter": {
+                      "func": {
+                        "signature_": {
+                          "args": [
+                            {
+                              "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                              "type": "String",
+                              "name": "leftField",
+                              "default": null,
+                              "optional": true
+                            },
+                            {
+                              "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                              "type": "Object",
+                              "name": "rightValue",
+                              "default": null,
+                              "optional": true
+                            },
+                            {
+                              "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                              "type": "String",
+                              "name": "rightField",
+                              "default": null,
+                              "optional": true
+                            },
+                            {
+                              "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                              "type": "Object",
+                              "name": "leftValue",
+                              "default": null,
+                              "optional": true
+                            }
+                          ],
+                          "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                          "returns": "Filter",
+                          "name": "Filter.equals"
+                        }
+                      },
+                      "args": {
+                        "leftField": {
+                          "func": null,
+                          "args": null,
+                          "varName": null,
+                          "sourceFrame": null,
+                          "string_": "ADM1_NAME"
+                        },
+                        "rightValue": "Bali"
+                      },
+                      "varName": null,
+                      "sourceFrame": null,
+                      "filter_": [
+                        {
+                          "func": {
+                            "signature_": {
+                              "args": [
+                                {
+                                  "description": "A selector for the left operand. Should not be specified if leftValue is specified.",
+                                  "type": "String",
+                                  "name": "leftField",
+                                  "default": null,
+                                  "optional": true
+                                },
+                                {
+                                  "description": "The value of the right operand. Should not be specified if rightField is specified.",
+                                  "type": "Object",
+                                  "name": "rightValue",
+                                  "default": null,
+                                  "optional": true
+                                },
+                                {
+                                  "description": "A selector for the right operand. Should not be specified if rightValue is specified.",
+                                  "type": "String",
+                                  "name": "rightField",
+                                  "default": null,
+                                  "optional": true
+                                },
+                                {
+                                  "description": "The value of the left operand. Should not be specified if leftField is specified.",
+                                  "type": "Object",
+                                  "name": "leftValue",
+                                  "default": null,
+                                  "optional": true
+                                }
+                              ],
+                              "description": "Creates a unary or binary filter that passes if the two operands are equals.",
+                              "returns": "Filter",
+                              "name": "Filter.equals"
+                            }
+                          },
+                          "args": {
+                            "leftField": {
+                              "func": null,
+                              "args": null,
+                              "varName": null,
+                              "sourceFrame": null,
+                              "string_": "ADM1_NAME"
+                            },
+                            "rightValue": "Bali"
+                          },
+                          "varName": null,
+                          "sourceFrame": null
+                        }
+                      ]
+                    }
+                  },
+                  "varName": null,
+                  "sourceFrame": null
+                }
+              },
+              "varName": null,
+              "sourceFrame": null
+            }
+          },
+          "varName": null,
+          "sourceFrame": null
+        },
+        "bandSelectors": {
+          "func": null,
+          "args": null,
+          "varName": null,
+          "sourceFrame": null,
+          "list_": [
+            "LST_Celsius"
+          ]
+        }
+      },
+      "varName": null,
+      "sourceFrame": null
+    }
+  },
+  "stats": {
+    "mean": 31.708820074190168,
+    "min": 16.388202490769263,
+    "max": 68.14780520000002,
+    "baseline_mean": 0,
+    "unit": "°C",
+    "region": "SELURUH BALI",
+    "threshold": 30,
+    "impact_area_ha": 337285.61749411654,
+    "is_prediction": false,
+    "target_year": 2031
+  },
+  "chart": [
+    {
+      "date": "2014-01-01",
+      "value": 31.746406142395152
+    },
+    {
+      "date": "2015-01-01",
+      "value": 32.589708035330105
+    },
+    {
+      "date": "2016-01-01",
+      "value": 31.654850321547848
+    },
+    {
+      "date": "2017-01-01",
+      "value": 30.14235168636954
+    },
+    {
+      "date": "2018-01-01",
+      "value": 31.747298334150383
+    },
+    {
+      "date": "2019-01-01",
+      "value": 32.76457273276515
+    },
+    {
+      "date": "2020-01-01",
+      "value": 30.21357297140516
+    },
+    {
+      "date": "2021-01-01",
+      "value": 29.695625425193587
+    },
+    {
+      "date": "2022-01-01",
+      "value": 29.035897721787574
+    },
+    {
+      "date": "2023-01-01",
+      "value": 31.738383509163157
+    },
+    {
+      "date": "2024-01-01",
+      "value": 30.96866897235339
+    }
+  ],
+  "scatter": [
+    {
+      "ndvi": 0.7997217178344727,
+      "lst": 30.713650159999986
+    },
+    {
+      "ndvi": 0.22415627539157867,
+      "lst": 37.46167614500001
+    },
+    {
+      "ndvi": 0.7260943055152893,
+      "lst": 34.42049285000002
+    },
+    {
+      "ndvi": 0.8377912640571594,
+      "lst": 30.851225465000013
+    },
+    {
+      "ndvi": 0.8462237119674683,
+      "lst": 31.564737140000034
+    },
+    {
+      "ndvi": 0.7945042252540588,
+      "lst": 34.592818025000014
+    },
+    {
+      "ndvi": 0.7596567273139954,
+      "lst": 31.663859720000023
+    },
+    {
+      "ndvi": 0.560477077960968,
+      "lst": 35.933821205000015
+    },
+    {
+      "ndvi": 0.8651823997497559,
+      "lst": 23.430305276000016
+    },
+    {
+      "ndvi": 0.8796254992485046,
+      "lst": 27.88011158000002
+    },
+    {
+      "ndvi": 0.8659918308258057,
+      "lst": 27.36057254000002
+    },
+    {
+      "ndvi": 0.42231330275535583,
+      "lst": 38.385396050000004
+    },
+    {
+      "ndvi": 0.8706114292144775,
+      "lst": 27.93821792000002
+    },
+    {
+      "ndvi": 0.6269779801368713,
+      "lst": 34.98275714000002
+    },
+    {
+      "ndvi": 0.7410064339637756,
+      "lst": 34.404542090000014
+    },
+    {
+      "ndvi": 0.82970130443573,
+      "lst": 30.529646750000023
+    },
+    {
+      "ndvi": 0.8408582806587219,
+      "lst": 32.41411511000001
+    },
+    {
+      "ndvi": 0.6765719056129456,
+      "lst": 35.724467480000044
+    },
+    {
+      "ndvi": 0.846763014793396,
+      "lst": 28.917480650000016
+    },
+    {
+      "ndvi": 0.25457826256752014,
+      "lst": 26.81027132
+    },
+    {
+      "ndvi": 0.8001816272735596,
+      "lst": 31.58239691000003
+    },
+    {
+      "ndvi": 0.7342566847801208,
+      "lst": 30.492048530000012
+    },
+    {
+      "ndvi": 0.876765251159668,
+      "lst": 28.791013910000004
+    },
+    {
+      "ndvi": 0.8490162491798401,
+      "lst": 31.780072400000023
+    },
+    {
+      "ndvi": 0.7246395349502563,
+      "lst": 33.42157650500003
+    },
+    {
+      "ndvi": 0.8335015177726746,
+      "lst": 27.945737564000034
+    },
+    {
+      "ndvi": 0.8647494316101074,
+      "lst": 26.965791230000036
+    },
+    {
+      "ndvi": 0.5850530862808228,
+      "lst": 39.12686224571432
+    },
+    {
+      "ndvi": 0.8226101398468018,
+      "lst": 31.91337518000003
+    },
+    {
+      "ndvi": 0.5915570855140686,
+      "lst": 33.58478696000001
+    },
+    {
+      "ndvi": 0.8725584149360657,
+      "lst": 23.392251320000014
+    },
+    {
+      "ndvi": 0.7707837224006653,
+      "lst": 30.470970739999984
+    },
+    {
+      "ndvi": 0.8733603954315186,
+      "lst": 23.452473577142882
+    },
+    {
+      "ndvi": 0.7562075257301331,
+      "lst": 33.86506459999998
+    },
+    {
+      "ndvi": 0.8292315006256104,
+      "lst": 27.53660057000002
+    },
+    {
+      "ndvi": 0.38987359404563904,
+      "lst": 38.27858292500001
+    },
+    {
+      "ndvi": 0.693967342376709,
+      "lst": 34.515912575000016
+    },
+    {
+      "ndvi": -0.37618446350097656,
+      "lst": 24.953431955000013
+    },
+    {
+      "ndvi": 0.8624879717826843,
+      "lst": 28.12450001000002
+    },
+    {
+      "ndvi": 0.858237087726593,
+      "lst": 19.475200400000006
+    },
+    {
+      "ndvi": 0.6809300780296326,
+      "lst": 33.51813557000003
+    },
+    {
+      "ndvi": 0.5169082283973694,
+      "lst": 35.89365947000002
+    },
+    {
+      "ndvi": 0.5877606272697449,
+      "lst": 42.48189302000003
+    },
+    {
+      "ndvi": -0.24570240080356598,
+      "lst": 28.702145390000027
+    },
+    {
+      "ndvi": 0.8569185733795166,
+      "lst": 30.298930400000017
+    },
+    {
+      "ndvi": 0.6259929537773132,
+      "lst": 38.90151707000001
+    },
+    {
+      "ndvi": 0.7676753401756287,
+      "lst": 31.51953556938777
+    },
+    {
+      "ndvi": 0.8333932757377625,
+      "lst": 30.52451972
+    },
+    {
+      "ndvi": 0.8221293687820435,
+      "lst": 30.173603000000014
+    },
+    {
+      "ndvi": 0.7773483395576477,
+      "lst": 33.55445203250001
+    },
+    {
+      "ndvi": 0.058503393083810806,
+      "lst": 32.88238385000001
+    },
+    {
+      "ndvi": 0.5950513482093811,
+      "lst": 39.586830080000006
+    },
+    {
+      "ndvi": 0.7250190377235413,
+      "lst": 37.15547852000003
+    },
+    {
+      "ndvi": 0.8680631518363953,
+      "lst": 30.67035524000005
+    },
+    {
+      "ndvi": 0.8720582723617554,
+      "lst": 24.28093652000001
+    },
+    {
+      "ndvi": 0.7862750291824341,
+      "lst": 28.355216359999986
+    },
+    {
+      "ndvi": 0.2885095477104187,
+      "lst": 50.136548809999994
+    },
+    {
+      "ndvi": 0.5142433047294617,
+      "lst": 34.11201654500003
+    },
+    {
+      "ndvi": 0.8643312454223633,
+      "lst": 26.08565108000001
+    },
+    {
+      "ndvi": 0.7100681066513062,
+      "lst": 34.168584776000024
+    },
+    {
+      "ndvi": 0.8179097175598145,
+      "lst": 30.410813588000032
+    },
+    {
+      "ndvi": 0.8365156054496765,
+      "lst": 32.921691080000016
+    },
+    {
+      "ndvi": 0.7554547786712646,
+      "lst": 32.01249776000003
+    },
+    {
+      "ndvi": 0.8788934350013733,
+      "lst": 26.895721820000006
+    },
+    {
+      "ndvi": 0.5705211758613586,
+      "lst": 37.30871975000002
+    },
+    {
+      "ndvi": 0.8253466486930847,
+      "lst": 26.834197460000023
+    },
+    {
+      "ndvi": 0.6397358179092407,
+      "lst": 36.83446947499999
+    },
+    {
+      "ndvi": 0.6420060992240906,
+      "lst": 36.20640830000004
+    },
+    {
+      "ndvi": 0.7612831592559814,
+      "lst": 33.514147879999996
+    },
+    {
+      "ndvi": 0.8019178509712219,
+      "lst": 31.95439142000002
+    },
+    {
+      "ndvi": -0.19270530343055725,
+      "lst": 25.372993910000012
+    },
+    {
+      "ndvi": 0.7756773233413696,
+      "lst": 26.97433627999999
+    },
+    {
+      "ndvi": 0.8366963863372803,
+      "lst": 27.242081180000024
+    },
+    {
+      "ndvi": 0.7540817856788635,
+      "lst": 33.430976060000035
+    },
+    {
+      "ndvi": 0.8626258373260498,
+      "lst": 28.215761144
+    },
+    {
+      "ndvi": 0.6561532020568848,
+      "lst": 41.14658654000001
+    },
+    {
+      "ndvi": 0.6842489242553711,
+      "lst": 33.14898941000001
+    },
+    {
+      "ndvi": 0.6539415121078491,
+      "lst": 36.63451530500002
+    },
+    {
+      "ndvi": 0.5778073668479919,
+      "lst": 40.694838230000016
+    },
+    {
+      "ndvi": 0.8708633780479431,
+      "lst": 27.46076935485716
+    },
+    {
+      "ndvi": 0.6686609387397766,
+      "lst": 30.15822191000001
+    },
+    {
+      "ndvi": 0.6081872582435608,
+      "lst": 36.39496907000001
+    },
+    {
+      "ndvi": 0.6383999586105347,
+      "lst": 35.87884805000001
+    },
+    {
+      "ndvi": 0.8260244727134705,
+      "lst": 33.272038130000055
+    },
+    {
+      "ndvi": 0.768588125705719,
+      "lst": 34.43367664142859
+    },
+    {
+      "ndvi": 0.5324559211730957,
+      "lst": 37.83509483000003
+    },
+    {
+      "ndvi": 0.45586255192756653,
+      "lst": 45.15478466000002
+    },
+    {
+      "ndvi": 0.8402388691902161,
+      "lst": 29.69394086000001
+    },
+    {
+      "ndvi": 0.7418316602706909,
+      "lst": 31.322057720000032
+    },
+    {
+      "ndvi": 0.5569431781768799,
+      "lst": 36.462759800000015
+    },
+    {
+      "ndvi": 0.6679990291595459,
+      "lst": 38.11138478000002
+    },
+    {
+      "ndvi": 0.5129410028457642,
+      "lst": 44.09348945000002
+    },
+    {
+      "ndvi": 0.8518140912055969,
+      "lst": 30.951202550000033
+    },
+    {
+      "ndvi": 0.8000279664993286,
+      "lst": 27.389625710000026
+    },
+    {
+      "ndvi": 0.8024387955665588,
+      "lst": 30.690863359999998
+    },
+    {
+      "ndvi": 0.8346365690231323,
+      "lst": 28.891845500000045
+    },
+    {
+      "ndvi": 0.8758363127708435,
+      "lst": 23.089186880000018
+    },
+    {
+      "ndvi": 0.8762456178665161,
+      "lst": 28.25267575999999
+    },
+    {
+      "ndvi": 0.7536140084266663,
+      "lst": 34.61361098
+    },
+    {
+      "ndvi": 0.8416079878807068,
+      "lst": 30.325704890000054
+    },
+    {
+      "ndvi": 0.7421876192092896,
+      "lst": 32.43730881714287
+    },
+    {
+      "ndvi": 0.39263761043548584,
+      "lst": 33.71011436000001
+    },
+    {
+      "ndvi": 0.850243091583252,
+      "lst": 28.145008130000008
+    },
+    {
+      "ndvi": 0.4997076094150543,
+      "lst": 36.12847744400004
+    },
+    {
+      "ndvi": 0.799107551574707,
+      "lst": 27.00280350371431
+    },
+    {
+      "ndvi": 0.8348813056945801,
+      "lst": 28.324454180000032
+    },
+    {
+      "ndvi": 0.8298056721687317,
+      "lst": 23.604168560000033
+    },
+    {
+      "ndvi": 0.7388436198234558,
+      "lst": 34.44270998000003
+    },
+    {
+      "ndvi": 0.891914963722229,
+      "lst": 27.011934499999995
+    },
+    {
+      "ndvi": 0.7154746651649475,
+      "lst": 30.45957734000001
+    },
+    {
+      "ndvi": -0.38622578978538513,
+      "lst": 29.04821991500002
+    },
+    {
+      "ndvi": 0.8787428140640259,
+      "lst": 23.980150760000015
+    },
+    {
+      "ndvi": 0.8504330515861511,
+      "lst": 28.510736270000024
+    },
+    {
+      "ndvi": 0.7676187753677368,
+      "lst": 31.35737726000002
+    },
+    {
+      "ndvi": 0.8041732311248779,
+      "lst": 29.625352592000013
+    },
+    {
+      "ndvi": 0.6325848698616028,
+      "lst": 34.36067750000001
+    },
+    {
+      "ndvi": 0.8298749923706055,
+      "lst": 28.46972003000002
+    },
+    {
+      "ndvi": 0.6324155926704407,
+      "lst": 38.15012234
+    },
+    {
+      "ndvi": 0.6414225697517395,
+      "lst": 31.81767062000002
+    },
+    {
+      "ndvi": 0.7227128744125366,
+      "lst": 30.071062400000017
+    },
+    {
+      "ndvi": 0.7793070077896118,
+      "lst": 31.425452825
+    },
+    {
+      "ndvi": 0.8195207118988037,
+      "lst": 30.6179456
+    },
+    {
+      "ndvi": 0.5089924335479736,
+      "lst": 38.00628066500002
+    },
+    {
+      "ndvi": 0.767170786857605,
+      "lst": 28.744300970000012
+    },
+    {
+      "ndvi": 0.8744384050369263,
+      "lst": 27.663067310000002
+    },
+    {
+      "ndvi": 0.8278528451919556,
+      "lst": 30.66181019000001
+    },
+    {
+      "ndvi": 0.8860530853271484,
+      "lst": 25.020937849999996
+    },
+    {
+      "ndvi": 0.27882030606269836,
+      "lst": 40.967710160000024
+    },
+    {
+      "ndvi": 0.8461909294128418,
+      "lst": 28.19798744000002
+    },
+    {
+      "ndvi": 0.7648600935935974,
+      "lst": 32.82940454000004
+    },
+    {
+      "ndvi": 0.8129647970199585,
+      "lst": 28.021959410000022
+    },
+    {
+      "ndvi": 0.29248079657554626,
+      "lst": 40.60369102999999
+    },
+    {
+      "ndvi": 0.840848445892334,
+      "lst": 30.27581807428573
+    },
+    {
+      "ndvi": 0.7021139860153198,
+      "lst": 36.590935550000026
+    },
+    {
+      "ndvi": 0.8411364555358887,
+      "lst": 26.376182780000022
+    },
+    {
+      "ndvi": 0.7324731945991516,
+      "lst": 33.84455648000002
+    },
+    {
+      "ndvi": 0.8719197511672974,
+      "lst": 28.678219250000012
+    },
+    {
+      "ndvi": 0.6051793694496155,
+      "lst": 40.17472952
+    },
+    {
+      "ndvi": 0.7711907029151917,
+      "lst": 34.856290400000034
+    },
+    {
+      "ndvi": 0.4315218925476074,
+      "lst": 28.874755400000012
+    },
+    {
+      "ndvi": 0.8070560693740845,
+      "lst": 27.92967287000002
+    },
+    {
+      "ndvi": 0.6924988627433777,
+      "lst": 35.61850886000002
+    },
+    {
+      "ndvi": 0.7034744620323181,
+      "lst": 29.531015239999988
+    },
+    {
+      "ndvi": 0.6689327955245972,
+      "lst": 34.11458005999998
+    },
+    {
+      "ndvi": 0.756860613822937,
+      "lst": 28.40363831000002
+    },
+    {
+      "ndvi": 0.8722021579742432,
+      "lst": 28.155262190000002
+    },
+    {
+      "ndvi": 0.8034670948982239,
+      "lst": 33.38739630500001
+    }
+  ],
+  "downloadUrl": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/thumbnails/1200bc1bc953f9982a61fcc4d318b762-08b76f96be1ac449e6a32a7ab451f2ee:getPixels"
+}
