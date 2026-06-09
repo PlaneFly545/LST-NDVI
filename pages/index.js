@@ -654,6 +654,15 @@ export default function Home() {
       {/* === NAVBAR === */}
       <nav className="flex items-center justify-between px-4 md:px-6 bg-white border-b h-14 md:h-16 border-slate-200 z-50">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          {/* Tombol panel (mobile) — kiri, ikon menu agar mudah dikenali */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!isSidebarOpen)}
+            className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            aria-label={isSidebarOpen ? 'Tutup panel kontrol' : 'Buka panel kontrol'}
+          >
+            <Menu size={22} className="text-slate-700" />
+          </button>
           <Activity size={20} className="text-slate-800 shrink-0" />
           <h1 className="text-sm md:text-base font-bold tracking-tight text-slate-800 truncate">Spatio-Temporal Analysis Engine</h1>
           {/* Region badge (desktop only) */}
@@ -678,7 +687,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            className="hidden md:inline-flex p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label={isSidebarOpen ? 'Tutup panel kontrol' : 'Buka panel kontrol'}
           >
             {isSidebarOpen ? <PanelLeftClose size={20} className="text-slate-600" /> : <PanelLeftOpen size={20} className="text-slate-600" />}
@@ -1066,7 +1075,17 @@ export default function Home() {
         <TourOverlay
           onTourComplete={handleTourComplete}
           onDemoProcess={handleDemoProcess}
-          onStepChange={setTourStep}
+          onStepChange={(idx, id) => {
+            setTourStep(idx);
+            // Saat panduan masuk ke 'Peta Satelit', tutup panel agar peta tak
+            // tertutup (khusus mobile; desktop tak terdampak). Langkah yang
+            // menyorot kontrol di panel memastikan panel terbuka kembali.
+            if (id === 'map') {
+              if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false);
+            } else if (id !== 'welcome' && id !== 'farewell') {
+              setSidebarOpen(true);
+            }
+          }}
         />
       )}
     </div>

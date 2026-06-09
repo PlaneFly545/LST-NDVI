@@ -135,7 +135,7 @@ function getTooltipPosition(rect, placement, tooltipW = 320, tooltipH = 280) {
   if (isNarrow) {
     const pos = placeAt(rect, 'bottom', tooltipW, tooltipH);
     return {
-      style: { top: `${Math.max(GAP, pos.top)}px`, left: `${clampLeft(pos.left)}px` },
+      style: { top: `${clampTop(pos.top)}px`, left: `${clampLeft(pos.left)}px` },
       placement: 'bottom',
     };
   }
@@ -218,8 +218,8 @@ export default function TourOverlay({ onTourComplete, onDemoProcess, onStepChang
   const isWelcome = step.placement === 'center';
 
   useEffect(() => {
-    if (onStepChange) onStepChange(stepIdx);
-  }, [stepIdx, onStepChange]);
+    if (onStepChange) onStepChange(stepIdx, step.id);
+  }, [stepIdx, step.id, onStepChange]);
 
   useEffect(() => {
     if (!step.targetId) {
