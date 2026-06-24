@@ -1,23 +1,23 @@
 {
   "_note": "Auto-generated monitoring snapshot. Jalankan ulang scripts/generate-snapshot.js untuk refresh.",
-  "_generated_at": "2026-06-24T05:50:51.420Z",
+  "_generated_at": "2026-06-24T05:54:36.167Z",
   "_params": {
     "mode": "history",
-    "type": "lst",
+    "type": "ndvi",
     "region_name": "ALL",
     "start_date": "2016-06-24",
     "end_date": "2026-06-24",
     "cloud_cover": "30",
     "reducer": "Median",
-    "vis_min": "20",
-    "vis_max": "45",
-    "threshold": "30",
+    "vis_min": "-1",
+    "vis_max": "1",
+    "threshold": "0.5",
     "gap_fill": "none"
   },
   "map": {
-    "mapid": "projects/earthengine-legacy/maps/0af942e8e580a813fa7cf651b2c76764-a7f42487ae8812f4a541548b7f61c6d9",
+    "mapid": "projects/earthengine-legacy/maps/cba297958e53c33269cd387ecf2303e1-450d8d8e26b4aaaef20e187ec8593448",
     "token": "",
-    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/0af942e8e580a813fa7cf651b2c76764-a7f42487ae8812f4a541548b7f61c6d9/tiles/{z}/{x}/{y}",
+    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/cba297958e53c33269cd387ecf2303e1-450d8d8e26b4aaaef20e187ec8593448/tiles/{z}/{x}/{y}",
     "image": {
       "func": {
         "signature_": {
@@ -2330,7 +2330,7 @@
           "varName": null,
           "sourceFrame": null,
           "list_": [
-            "LST_Celsius"
+            "NDVI"
           ]
         }
       },
@@ -2339,61 +2339,61 @@
     }
   },
   "stats": {
-    "mean": 31.31917407688746,
-    "min": 16.32988956714289,
-    "max": 66.80238707750001,
+    "mean": 0.7402696314288936,
+    "min": -0.8015415668487549,
+    "max": 0.9403510689735413,
     "baseline_mean": 0,
-    "unit": "°C",
+    "unit": "Index",
     "region": "SELURUH BALI",
-    "threshold": 30,
-    "impact_area_ha": 321037.6038328376,
+    "threshold": 0.5,
+    "impact_area_ha": 525151.3271222628,
     "is_prediction": false,
     "target_year": 2031
   },
   "chart": [
     {
       "date": "2016-01-01",
-      "value": 30.563597291020017
+      "value": 0.7319369914109795
     },
     {
       "date": "2017-01-01",
-      "value": 30.14235168636954
+      "value": 0.6991595908995891
     },
     {
       "date": "2018-01-01",
-      "value": 31.747298334150383
+      "value": 0.6963490306069413
     },
     {
       "date": "2019-01-01",
-      "value": 32.76457273276515
+      "value": 0.6717441740212897
     },
     {
       "date": "2020-01-01",
-      "value": 30.21357297140516
+      "value": 0.7086629635182178
     },
     {
       "date": "2021-01-01",
-      "value": 29.695625425193587
+      "value": 0.7136585280426709
     },
     {
       "date": "2022-01-01",
-      "value": 29.035897721787574
+      "value": 0.7218861401593434
     },
     {
       "date": "2023-01-01",
-      "value": 31.738383509163157
+      "value": 0.7005121761677329
     },
     {
       "date": "2024-01-01",
-      "value": 30.96866897235339
+      "value": 0.7040522636439063
     },
     {
       "date": "2025-01-01",
-      "value": 30.662371021381713
+      "value": 0.7158279671495189
     },
     {
       "date": "2026-01-01",
-      "value": 30.44197911032183
+      "value": 0.7536043913361248
     }
   ],
   "scatter": [
@@ -2986,5 +2986,5 @@
       "lst": 33.26759470400002
     }
   ],
-  "downloadUrl": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/thumbnails/7e2b8c4ac56e8cfe93ec6968646d867a-30e1f28aa055f849b4b63aebd352c92f:getPixels"
+  "downloadUrl": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/thumbnails/5441ded76d1be93fd53f24e0f25a5e76-08acd46d7fe672bea21746e88ed7b1e2:getPixels"
 }

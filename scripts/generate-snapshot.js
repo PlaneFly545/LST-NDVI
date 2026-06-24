@@ -25,15 +25,15 @@ tenYearsAgo.setFullYear(now.getFullYear() - 10);
 
 const params = new URLSearchParams({
   mode: 'history',
-  type: 'lst',
+  type: 'ndvi',
   region_name: 'ALL',
   start_date: tenYearsAgo.toISOString().split('T')[0],
   end_date: now.toISOString().split('T')[0],
   cloud_cover: 30,
   reducer: 'Median',
-  vis_min: 20,
-  vis_max: 45,
-  threshold: 30,
+  vis_min: -1,
+  vis_max: 1,
+  threshold: 0.5,
   gap_fill: 'none',
 });
 

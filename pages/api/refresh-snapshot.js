@@ -9,23 +9,23 @@ import { resolveGeometry, buildDualCollection, buildFinalImage, runGeeEvaluation
 
 const REQUEST_TIMEOUT_MS = 180_000; // 3 menit (lebih longgar untuk background job)
 
-// Parameter default snapshot — Seluruh Bali, LST, Median, 10 tahun terakhir
+// Parameter default snapshot — Seluruh Bali, NDVI, Median, 10 tahun terakhir
 function getDefaultParams() {
   const now = new Date();
   const tenYearsAgo = new Date();
   tenYearsAgo.setFullYear(now.getFullYear() - 10);
 
   return {
-    type: 'lst',
+    type: 'ndvi',
     mode: 'history',
     region_name: 'ALL',
     start_date: tenYearsAgo.toISOString().split('T')[0],
     end_date: now.toISOString().split('T')[0],
     cloud_cover: 30,
     reducer: 'Median',
-    vis_min: 20,
-    vis_max: 45,
-    threshold: 30,
+    vis_min: -1,
+    vis_max: 1,
+    threshold: 0.5,
     gap_fill: 'none',
   };
 }
@@ -54,8 +54,10 @@ export default async function handler(req, res) {
       geometry, params.start_date, params.end_date, params.cloud_cover
     );
 
-    const mainBand = 'LST_Celsius';
-    const palette = ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
+    const mainBand = params.type === 'ndvi' ? 'NDVI' : 'LST_Celsius';
+    const palette = params.type === 'ndvi'
+      ? ['red', 'yellow', 'green']
+      : ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
 
     const { finalImage, baselineStats } = buildFinalImage(
       dualCollection, params.mode, params.reducer,

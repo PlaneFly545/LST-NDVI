@@ -171,6 +171,23 @@ export default function Home() {
         setScatterData(snapshot.scatter || []);
         if (snapshot.downloadUrl) setTiffUrl(snapshot.downloadUrl);
         if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
+
+        // Sinkronisasi parameter filter dengan data snapshot yang dimuat
+        const params = snapshot._params || {};
+        if (params.type) setLayerType(params.type);
+        if (params.region_name) {
+          setRegion(params.region_name === 'ALL' ? 'Seluruh Bali' : params.region_name);
+        }
+        if (params.vis_min !== undefined) setVisMin(parseFloat(params.vis_min));
+        if (params.vis_max !== undefined) setVisMax(parseFloat(params.vis_max));
+        if (params.threshold !== undefined) setThreshold(parseFloat(params.threshold));
+        if (params.cloud_cover !== undefined) {
+          setCloudCover(parseInt(params.cloud_cover));
+          setDebouncedCloudCover(parseInt(params.cloud_cover));
+        }
+        if (params.reducer) setReducer(params.reducer);
+        if (params.gap_fill) setGapFill(params.gap_fill);
+
         setSnapshotLoaded(true);
       } catch {
         // Gagal load snapshot? tidak masalah, biarkan empty state normal
