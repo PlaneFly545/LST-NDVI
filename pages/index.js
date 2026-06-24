@@ -144,6 +144,43 @@ export default function Home() {
     }
   }, []);
 
+  // ── Auto-load monitoring snapshot saat halaman dibuka ──
+  // Snapshot berisi data analisis pra-generate (oleh cron / script).
+  // User langsung melihat peta + statistik tanpa klik apapun.
+  const [snapshotLoaded, setSnapshotLoaded] = useState(false);
+  const [snapshotDate, setSnapshotDate] = useState(null); // tanggal generate snapshot
+  useEffect(() => {
+    // Jangan load jika tour aktif (tour punya mekanisme demo sendiri)
+    if (typeof window === 'undefined') return;
+    if (!localStorage.getItem(TOUR_KEY)) return; // Tour belum selesai
+
+    const loadSnapshot = async () => {
+      try {
+        const res = await fetch('/data/monitoring_snapshot.json');
+        if (!res.ok) return;
+
+        const snapshot = await res.json();
+
+        // Validasi: pastikan data masih bisa dipakai
+        if (!snapshot?.map?.urlFormat || (!snapshot?.stats?.mean && snapshot?.stats?.mean !== 0)) return;
+
+        // Set semua state — peta langsung muncul!
+        setMapUrl(snapshot.map.urlFormat);
+        setStats(snapshot.stats);
+        setChartData(snapshot.chart || []);
+        setScatterData(snapshot.scatter || []);
+        if (snapshot.downloadUrl) setTiffUrl(snapshot.downloadUrl);
+        if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
+        setSnapshotLoaded(true);
+      } catch {
+        // Gagal load snapshot? tidak masalah, biarkan empty state normal
+        console.warn('Monitoring snapshot tidak tersedia.');
+      }
+    };
+
+    loadSnapshot();
+  }, []); // hanya sekali saat mount
+
   const handleTourComplete = () => {
     setIsTourActive(false);
     if (typeof window !== 'undefined') {
@@ -256,6 +293,7 @@ export default function Home() {
     setLoading(true);
     toast.dismiss();
     setTiffUrl(null);
+    setSnapshotLoaded(false);
 
     const loadingMsg = visualMode === 'split'
       ? 'Memproses dua peta historis...'
@@ -968,7 +1006,12 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Ringkasan Analitik</span>
+                    <span className="text-[13px] font-semibold text-slate-600 mb-1 text-center block">Ringkasan Analitik</span>
+                    {snapshotLoaded && snapshotDate && (
+                      <p className="text-[10px] text-slate-400 text-center mb-4">
+                        Data snapshot: {snapshotDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}, {snapshotDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                      </p>
+                    )}
                     {renderKPIs()}
                   </>
                 )}
