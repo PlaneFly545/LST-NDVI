@@ -686,7 +686,7 @@ export default function Home() {
         <title>Spatio-Temporal Analysis Engine — LST & NDVI Bali</title>
         <meta name="description" content="Analisis spasio-temporal Land Surface Temperature (LST) dan Normalized Difference Vegetation Index (NDVI) wilayah Bali menggunakan data Landsat 8/9 via Google Earth Engine." />
       </Head>
-      <Toaster position="bottom-center" />
+      <Toaster position="top-center" containerStyle={{ top: 70 }} />
 
       {/* Global Style untuk Animasi Lonceng Bergetar */}
       <style jsx global>{`
