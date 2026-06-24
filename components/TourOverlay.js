@@ -38,7 +38,7 @@ const TOUR_STEPS = [
     targetId: 'tour-parameter',
     title: 'Parameter Lingkungan',
     content:
-      'Pilih yang ingin kamu lihat: LST untuk suhu permukaan, atau NDVI untuk kerapatan vegetasi. Tutupan awan menyaring citra yang kurang jernih.',
+      'Pilih yang ingin kamu lihat: LST untuk suhu permukaan, atau NDVI untuk kerapatan vegetasi.',
     placement: 'right',
     forcedClick: false,
   },

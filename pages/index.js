@@ -869,13 +869,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="px-4 py-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-500">Tutupan Awan</span>
-                    <span className="text-slate-600 font-semibold">{cloudCover}%</span>
-                  </div>
-                  <input type="range" min="0" max="100" value={cloudCover} onChange={(e) => setCloudCover(e.target.value)} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
-                </div>
+
 
                 {/* Vis Range Preview */}
                 <div className="px-4 py-3 mt-3 bg-slate-50 border border-slate-100 rounded-lg">
