@@ -149,51 +149,52 @@ export default function Home() {
   // User langsung melihat peta + statistik tanpa klik apapun.
   const [snapshotLoaded, setSnapshotLoaded] = useState(false);
   const [snapshotDate, setSnapshotDate] = useState(null); // tanggal generate snapshot
+
+  const loadSnapshot = async () => {
+    try {
+      const res = await fetch('/data/monitoring_snapshot.json');
+      if (!res.ok) return;
+
+      const snapshot = await res.json();
+
+      // Validasi: pastikan data masih bisa dipakai
+      if (!snapshot?.map?.urlFormat || (!snapshot?.stats?.mean && snapshot?.stats?.mean !== 0)) return;
+
+      // Set semua state — peta langsung muncul!
+      setMapUrl(snapshot.map.urlFormat);
+      setStats(snapshot.stats);
+      setChartData(snapshot.chart || []);
+      setScatterData(snapshot.scatter || []);
+      if (snapshot.downloadUrl) setTiffUrl(snapshot.downloadUrl);
+      if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
+
+      // Sinkronisasi parameter filter dengan data snapshot yang dimuat
+      const params = snapshot._params || {};
+      if (params.type) setLayerType(params.type);
+      if (params.region_name) {
+        setRegion(params.region_name === 'ALL' ? 'Seluruh Bali' : params.region_name);
+      }
+      if (params.vis_min !== undefined) setVisMin(parseFloat(params.vis_min));
+      if (params.vis_max !== undefined) setVisMax(parseFloat(params.vis_max));
+      if (params.threshold !== undefined) setThreshold(parseFloat(params.threshold));
+      if (params.cloud_cover !== undefined) {
+        setCloudCover(parseInt(params.cloud_cover));
+        setDebouncedCloudCover(parseInt(params.cloud_cover));
+      }
+      if (params.reducer) setReducer(params.reducer);
+      if (params.gap_fill) setGapFill(params.gap_fill);
+
+      setSnapshotLoaded(true);
+    } catch {
+      // Gagal load snapshot? tidak masalah, biarkan empty state normal
+      console.warn('Monitoring snapshot tidak tersedia.');
+    }
+  };
+
   useEffect(() => {
     // Jangan load jika tour aktif (tour punya mekanisme demo sendiri)
     if (typeof window === 'undefined') return;
     if (!localStorage.getItem(TOUR_KEY)) return; // Tour belum selesai
-
-    const loadSnapshot = async () => {
-      try {
-        const res = await fetch('/data/monitoring_snapshot.json');
-        if (!res.ok) return;
-
-        const snapshot = await res.json();
-
-        // Validasi: pastikan data masih bisa dipakai
-        if (!snapshot?.map?.urlFormat || (!snapshot?.stats?.mean && snapshot?.stats?.mean !== 0)) return;
-
-        // Set semua state — peta langsung muncul!
-        setMapUrl(snapshot.map.urlFormat);
-        setStats(snapshot.stats);
-        setChartData(snapshot.chart || []);
-        setScatterData(snapshot.scatter || []);
-        if (snapshot.downloadUrl) setTiffUrl(snapshot.downloadUrl);
-        if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
-
-        // Sinkronisasi parameter filter dengan data snapshot yang dimuat
-        const params = snapshot._params || {};
-        if (params.type) setLayerType(params.type);
-        if (params.region_name) {
-          setRegion(params.region_name === 'ALL' ? 'Seluruh Bali' : params.region_name);
-        }
-        if (params.vis_min !== undefined) setVisMin(parseFloat(params.vis_min));
-        if (params.vis_max !== undefined) setVisMax(parseFloat(params.vis_max));
-        if (params.threshold !== undefined) setThreshold(parseFloat(params.threshold));
-        if (params.cloud_cover !== undefined) {
-          setCloudCover(parseInt(params.cloud_cover));
-          setDebouncedCloudCover(parseInt(params.cloud_cover));
-        }
-        if (params.reducer) setReducer(params.reducer);
-        if (params.gap_fill) setGapFill(params.gap_fill);
-
-        setSnapshotLoaded(true);
-      } catch {
-        // Gagal load snapshot? tidak masalah, biarkan empty state normal
-        console.warn('Monitoring snapshot tidak tersedia.');
-      }
-    };
 
     loadSnapshot();
   }, []); // hanya sekali saat mount
@@ -205,6 +206,7 @@ export default function Home() {
       window.__demoActive = false;
     }
     resetData(); // Hapus data/peta placeholder seketika
+    loadSnapshot(); // Auto-load real snapshot langsung setelah tour selesai!
   };
 
   const handleTourReopen = () => {
