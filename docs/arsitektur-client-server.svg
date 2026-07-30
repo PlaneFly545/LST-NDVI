@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1690" width="1200" height="1690" font-family="Segoe UI, Calibri, Arial, sans-serif">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+    </marker>
+    <marker id="arwd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a5cc4"/>
+    </marker>
+    <marker id="arwg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6a6a6a"/>
+    </marker>
+    <style>
+      .doc-title { font-size: 21px; font-weight: 700; fill: #10131a; }
+      .doc-sub   { font-size: 12.5px; fill: #4a5262; }
+      .band-hdr  { font-size: 14px; font-weight: 700; letter-spacing: .4px; }
+      .box-ttl   { font-size: 12.5px; font-weight: 700; fill: #14181f; }
+      .body      { font-size: 10px; fill: #333a45; }
+      .mono      { font-size: 9.5px; fill: #5b6472; font-family: Consolas, "Courier New", monospace; }
+      .monoW     { font-size: 10px; fill: #2b3542; font-family: Consolas, "Courier New", monospace; }
+      .flow      { font-size: 10px; fill: #5c6472; font-style: italic; }
+      .gutter    { font-size: 10px; fill: #6a6a6a; }
+      .note      { font-size: 10px; fill: #4a5262; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="1690" fill="#ffffff"/>
+
+  <text x="600" y="40" class="doc-title" text-anchor="middle">Arsitektur Client&#8211;Server Sistem Pemantauan LST &amp; NDVI Provinsi Bali</text>
+  <text x="600" y="64" class="doc-sub" text-anchor="middle">Next.js 16 (Pages Router) &#183; REST API &#183; Middleware Keamanan &#183; Lapisan Cache &#183; Google Earth Engine</text>
+
+  <!-- ============================ BAND 1 : KLIEN ============================ -->
+  <rect x="70" y="88" width="1060" height="262" rx="10" fill="#eef4ff" stroke="#c3d4f7" stroke-width="1.5"/>
+  <text x="92" y="113" class="band-hdr" fill="#2b5cb8">LAPISAN KLIEN &#8212; Peramban Pengguna (muat awal SSR, interaksi Client-Side Rendering)</text>
+
+  <!-- A -->
+  <rect x="92" y="132" width="239" height="200" rx="7" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="106" y="154" class="box-ttl">1 &#183; Halaman &amp; Navigasi</text>
+  <text x="106" y="171" class="mono">pages/index.js &#8212; dasbor utama<tspan x="106" dy="12">pages/metodologi.js &#183; evaluasi.js</tspan></text>
+  <text x="106" y="202" class="body">React 19 &#183; Tailwind CSS 4<tspan x="106" dy="15">Muat awal: SSR (HTML dirakit server)</tspan><tspan x="106" dy="15">Interaksi: CSR (hidrasi di peramban)</tspan><tspan x="106" dy="15">Komponen modular &amp; dapat dipakai</tspan><tspan x="106" dy="15">ulang di seluruh halaman</tspan><tspan x="106" dy="15">Memuat snapshot pra-komputasi</tspan><tspan x="106" dy="15">saat halaman pertama kali dibuka</tspan></text>
+
+  <!-- B -->
+  <rect x="351" y="132" width="239" height="200" rx="7" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="365" y="154" class="box-ttl">2 &#183; Panel Kontrol Parameter</text>
+  <text x="365" y="176" class="body">Mode: history / prediksi<tspan x="365" dy="15">Indeks: LST (&#176;C) atau NDVI</tspan><tspan x="365" dy="15">Wilayah: seluruh Bali / kabupaten</tspan><tspan x="365" dy="15">Rentang tanggal (react-datepicker)</tspan><tspan x="365" dy="15">Reducer: Median &#183; Mean &#183; linearFit</tspan><tspan x="365" dy="15">Gap-fill dan ambang batas</tspan><tspan x="365" dy="15">Tutupan awan dikunci pada 30%</tspan></text>
+  <text x="365" y="298" class="mono">&#8594; dirakit menjadi query string REST</text>
+
+  <!-- C -->
+  <rect x="610" y="132" width="239" height="200" rx="7" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="624" y="154" class="box-ttl">3 &#183; Visualisasi Analisis</text>
+  <text x="624" y="171" class="mono">recharts 3 &#183; file-saver</text>
+  <text x="624" y="192" class="body">Grafik deret waktu nilai tahunan<tspan x="624" dy="15">Scatter plot hubungan LST&#8211;NDVI</tspan><tspan x="624" dy="15">Kartu statistik: mean, min, maks</tspan><tspan x="624" dy="15">Mode perbandingan dua periode</tspan><tspan x="624" dy="15">(dua permintaan API paralel)</tspan><tspan x="624" dy="15">Unduh citra hasil (GeoTIFF)</tspan></text>
+
+  <!-- D -->
+  <rect x="869" y="132" width="239" height="200" rx="7" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="883" y="154" class="box-ttl">4 &#183; Peta Interaktif</text>
+  <text x="883" y="171" class="mono">components/Map.js</text>
+  <text x="883" y="192" class="body">react-leaflet 5 &#183; leaflet 1.9<tspan x="883" dy="15">dynamic import, ssr: false</tspan><tspan x="883" dy="15">TileLayer &#8212; tile hasil komputasi GEE</tspan><tspan x="883" dy="15">ImageOverlay &#8212; mode demo lokal</tspan><tspan x="883" dy="15">GeoJSON batas kabupaten/kota</tspan><tspan x="883" dy="15">(public/data/bali_kabkota.json)</tspan></text>
+
+  <!-- arrows band1 -> REST -->
+  <line x1="540" y1="350" x2="540" y2="368" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+  <line x1="660" y1="368" x2="660" y2="350" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+
+  <!-- ============================ BAND 2 : REST ============================ -->
+  <rect x="70" y="372" width="1060" height="118" rx="10" fill="#fff8ea" stroke="#f0d9a8" stroke-width="1.5"/>
+  <text x="92" y="396" class="band-hdr" fill="#a2711a">PROTOKOL KOMUNIKASI &#8212; Representational State Transfer (REST) di atas HTTP/HTTPS, bersifat stateless</text>
+  <text x="92" y="420" class="monoW">&#9660;  Permintaan &#8212; GET /api/map-layer?mode=&#8230;&amp;type=&#8230;&amp;region_name=&#8230;&amp;start_date=&#8230;&amp;end_date=&#8230;&amp;reducer=&#8230;&amp;gap_fill=&#8230;&amp;threshold=&#8230;</text>
+  <text x="92" y="440" class="monoW">&#9650;  Respons 200 OK &#183; application/json &#8212; { map: { urlFormat }, stats, chart[ ], scatter[ ], downloadUrl }</text>
+  <text x="92" y="465" class="flow">Kode status lain: 400 parameter tidak valid &#183; 403 agen otomatis &#183; 404 / 422 data atau piksel kosong &#183; 429 kuota terlampaui &#183; 500 galat internal &#183; 504 batas waktu GEE</text>
+  <text x="92" y="481" class="flow">Setiap permintaan memuat seluruh informasi yang diperlukan (tanpa sesi di server), sehingga sistem dapat diakses dari peramban desktop maupun perangkat bergerak tanpa perubahan pada sisi server.</text>
+
+  <line x1="540" y1="490" x2="540" y2="508" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+  <line x1="660" y1="508" x2="660" y2="490" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+
+  <!-- ============================ BAND 3 : MIDDLEWARE ============================ -->
+  <rect x="70" y="512" width="1060" height="232" rx="10" fill="#fdeeee" stroke="#f3c9c9" stroke-width="1.5"/>
+  <text x="92" y="537" class="band-hdr" fill="#b03a3a">LAPISAN MIDDLEWARE &#8212; proxy.js (Edge Runtime, config.matcher: '/api/:path*') &#183; filter sebelum backend aplikasi</text>
+
+  <rect x="92" y="556" width="325" height="132" rx="7" fill="#ffffff" stroke="#f3c9c9"/>
+  <text x="106" y="578" class="box-ttl">A &#183; Pemblokiran Agen Otomatis (Bot Blocking)</text>
+  <text x="106" y="595" class="mono">BOT_UA_PATTERNS</text>
+  <text x="106" y="614" class="body">Header User-Agent dicocokkan dengan pola bot:<tspan x="106" dy="14">curl, wget, python-requests, go-http-client,</tspan><tspan x="106" dy="14">scrapy, libwww-perl, java, aiohttp</tspan><tspan x="106" dy="14">User-Agent kosong atau cocok &#8594; 403 ditolak</tspan><tspan x="106" dy="14">pada lapisan paling awal</tspan></text>
+
+  <rect x="437" y="556" width="325" height="132" rx="7" fill="#ffffff" stroke="#f3c9c9"/>
+  <text x="451" y="578" class="box-ttl">B &#183; Fingerprint Pengguna (SHA-256)</text>
+  <text x="451" y="595" class="mono">crypto.subtle.digest('SHA-256')  &#8212; Web Crypto</text>
+  <text x="451" y="614" class="body">Masukan: alamat IP (x-forwarded-for) +<tspan x="451" dy="14">User-Agent + Accept-Language</tspan><tspan x="451" dy="14">Keluaran: 16 karakter heksadesimal</tspan><tspan x="451" dy="14">IP asli tidak pernah disimpan &#8594; identitas tidak</tspan><tspan x="451" dy="14">dapat direkayasa dan privasi tetap terjaga</tspan></text>
+
+  <rect x="782" y="556" width="325" height="132" rx="7" fill="#ffffff" stroke="#f3c9c9"/>
+  <text x="796" y="578" class="box-ttl">C &#183; Pembatasan Laju (Rate Limiting)</text>
+  <text x="796" y="595" class="mono">Map&lt;fingerprint, { count, windowStart }&gt;</text>
+  <text x="796" y="614" class="body">Kuota: 5 permintaan per jendela 60 detik<tspan x="796" dy="14">Melebihi kuota &#8594; 429 Too Many Requests</tspan><tspan x="796" dy="14">Penolakan sangat cepat (&#177;10&#8211;18 ms) karena</tspan><tspan x="796" dy="14">tidak menyentuh cache maupun GEE</tspan><tspan x="796" dy="14">Cache HIT tetap dihitung sebagai permintaan</tspan></text>
+
+  <rect x="92" y="698" width="1015" height="32" rx="6" fill="#ffffff" stroke="#f3c9c9" stroke-dasharray="4 3"/>
+  <text x="106" y="718" class="body">Header keamanan global (next.config.ts) &#8212; Content-Security-Policy &#183; Strict-Transport-Security &#183; X-Frame-Options &#183; X-Content-Type-Options &#183; Referrer-Policy &#183; Permissions-Policy</text>
+
+  <line x1="540" y1="744" x2="540" y2="762" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+  <line x1="660" y1="762" x2="660" y2="744" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+
+  <!-- ============================ BAND 4 : SERVER ============================ -->
+  <rect x="70" y="766" width="1060" height="560" rx="10" fill="#eaf7ef" stroke="#bee3cc" stroke-width="1.5"/>
+  <text x="92" y="791" class="band-hdr" fill="#2f7d50">LAPISAN SERVER &#8212; Next.js API Routes (Node.js Runtime) &#183; kredensial sensitif terisolasi di sisi server</text>
+
+  <rect x="92" y="806" width="1015" height="30" rx="6" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="106" y="825" class="body"><tspan class="monoW">pages/api/map-layer.js</tspan> &#8212; handler tipis, hanya menerima metode GET; seluruh logika berat ditempatkan pada modul layanan di direktori /lib</text>
+
+  <rect x="92" y="846" width="239" height="300" rx="7" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="106" y="868" class="box-ttl">1 &#183; Validasi Parameter</text>
+  <text x="106" y="885" class="mono">lib/validators/queryParams.js</text>
+  <text x="106" y="906" class="body">Batas ukuran query 2 KB<tspan x="106" dy="15">Whitelist mode, tipe, wilayah,</tspan><tspan x="106" dy="15">reducer, dan gap-fill</tspan><tspan x="106" dy="15">Validasi format tanggal</tspan><tspan x="106" dy="15">clamp() untuk nilai numerik:</tspan><tspan x="106" dy="15">cloud_cover, vis_min / vis_max,</tspan><tspan x="106" dy="15">target_year</tspan><tspan x="106" dy="15">Log galat disanitasi agar tidak</tspan><tspan x="106" dy="15">membocorkan detail internal</tspan><tspan x="106" dy="15">Tidak valid &#8594; 400 Bad Request</tspan></text>
+
+  <rect x="351" y="846" width="239" height="300" rx="7" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="365" y="868" class="box-ttl">2 &#183; Lapisan Cache</text>
+  <text x="365" y="885" class="mono">lib/gee/cache.js</text>
+  <text x="365" y="906" class="body">Kunci = SHA-256 dari seluruh<tspan x="365" dy="15">parameter yang diurutkan</tspan><tspan x="365" dy="15">alfabetis (deterministik)</tspan><tspan x="365" dy="15">Struktur: Map berbasis memori</tspan><tspan x="365" dy="15">TTL 24 jam &#183; maks 200 entri</tspan><tspan x="365" dy="15">Evisi FIFO saat kapasitas penuh</tspan><tspan x="365" dy="15">Header X-Cache: HIT | MISS</tspan><tspan x="365" dy="15">MISS &#8594; eksekusi pipeline GEE</tspan><tspan x="365" dy="15">HIT &#8594; respons &#177;43 ms tanpa</tspan><tspan x="365" dy="15">memanggil GEE sama sekali</tspan></text>
+
+  <rect x="610" y="846" width="239" height="300" rx="7" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="624" y="868" class="box-ttl">3 &#183; Autentikasi GEE</text>
+  <text x="624" y="885" class="mono">lib/gee/auth.js</text>
+  <text x="624" y="906" class="body">Service Account Google:<tspan x="624" dy="15">GEE_PRIVATE_KEY dan</tspan><tspan x="624" dy="15">GEE_CLIENT_EMAIL dibaca dari</tspan><tspan x="624" dy="15">environment variable server</tspan><tspan x="624" dy="15">authenticateViaPrivateKey()</tspan><tspan x="624" dy="15">Pola singleton: satu promise</tspan><tspan x="624" dy="15">per cold start, dipakai ulang</tspan><tspan x="624" dy="15">Kunci privat tidak pernah</tspan><tspan x="624" dy="15">terekspos ke antarmuka klien</tspan><tspan x="624" dy="15">&#8212; jembatan keamanan sistem</tspan></text>
+
+  <rect x="869" y="846" width="239" height="300" rx="7" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="883" y="868" class="box-ttl">4 &#183; Pipeline Pemrosesan (DSP)</text>
+  <text x="883" y="885" class="mono">lib/gee/compute.js</text>
+  <text x="883" y="906" class="body">resolveGeometry() &#8212; batas wilayah<tspan x="883" dy="15">FAO/GAUL &amp; GeoJSON lokal</tspan><tspan x="883" dy="15">buildDualCollection() &#8212; Landsat</tspan><tspan x="883" dy="15">8/9 C02 T1_L2 + masking awan</tspan><tspan x="883" dy="15">buildFinalImage() &#8212; Median /</tspan><tspan x="883" dy="15">Mean / linearFit + gap-fill</tspan><tspan x="883" dy="15">runGeeEvaluation() &#8212; evaluate()</tspan><tspan x="883" dy="15">paralel: getMap, statistik agregat,</tspan><tspan x="883" dy="15">deret waktu, scatter, unduhan</tspan><tspan x="883" dy="15">withTimeout 120 detik &#8594; 504</tspan></text>
+
+  <rect x="92" y="1158" width="498" height="150" rx="7" fill="#f7f9f8" stroke="#bee3cc"/>
+  <text x="106" y="1180" class="box-ttl">Aset Statis &#8212; public/data/ (dilayani langsung ke klien, tanpa komputasi)</text>
+  <text x="106" y="1202" class="body"><tspan class="monoW">monitoring_snapshot.json</tspan> &#8212; hasil pra-komputasi NDVI seluruh Bali;<tspan x="106" dy="15">dimuat otomatis saat halaman pertama kali dibuka sehingga</tspan><tspan x="106" dy="15">pengguna langsung melihat peta tanpa menunggu eksekusi GEE</tspan><tspan x="106" dy="15"><tspan class="monoW">bali_kabkota.json</tspan> &#8212; GeoJSON batas administrasi kabupaten/kota</tspan><tspan x="106" dy="15"><tspan class="monoW">demo_snapshot.json</tspan> &#8212; data contoh untuk mode demo dan tur</tspan><tspan x="106" dy="15">Diperkuat skrip pembangkit di direktori /scripts</tspan></text>
+
+  <rect x="610" y="1158" width="498" height="150" rx="7" fill="#f7f9f8" stroke="#bee3cc"/>
+  <text x="624" y="1180" class="box-ttl">pages/api/refresh-snapshot.js &#8212; pekerjaan latar (cron)</text>
+  <text x="624" y="1197" class="mono">POST + header x-cron-secret (CRON_SECRET), selain itu &#8594; 401</text>
+  <text x="624" y="1218" class="body">Meregenerasi snapshot pemantauan: NDVI, seluruh Bali,<tspan x="624" dy="15">rentang 10 tahun terakhir, reducer Median</tspan><tspan x="624" dy="15">Siklus pembaruan 8 hari (revisit Landsat 8 sebenarnya 16 hari)</tspan><tspan x="624" dy="15">Batas waktu lebih longgar: 180 detik</tspan><tspan x="624" dy="15">Hasil ditulis kembali ke monitoring_snapshot.json</tspan></text>
+
+  <line x1="540" y1="1326" x2="540" y2="1344" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+  <line x1="660" y1="1344" x2="660" y2="1326" stroke="#444" stroke-width="1.6" marker-end="url(#arw)"/>
+
+  <!-- ============================ BAND 5 : EKSTERNAL ============================ -->
+  <rect x="70" y="1348" width="1060" height="232" rx="10" fill="#f3effa" stroke="#d6ccee" stroke-width="1.5"/>
+  <text x="92" y="1373" class="band-hdr" fill="#5b44a8">LAYANAN EKSTERNAL (Cloud) &#8212; komputasi dan penyajian data di luar server aplikasi</text>
+
+  <rect x="92" y="1392" width="239" height="170" rx="7" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="106" y="1414" class="box-ttl">Google Earth Engine &#8212; Komputasi</text>
+  <text x="106" y="1431" class="mono">earthengine.googleapis.com</text>
+  <text x="106" y="1452" class="body">Citra Landsat 8 Collection 2<tspan x="106" dy="15">Level-2 (Surface Reflectance +</tspan><tspan x="106" dy="15">Surface Temperature)</tspan><tspan x="106" dy="15">reduceRegion, linearFit, Reducer</tspan><tspan x="106" dy="15">mean / median / minMax</tspan><tspan x="106" dy="15">Cold call &#177;12 detik; kuota</tspan><tspan x="106" dy="15">komputasi terbatas</tspan></text>
+
+  <rect x="351" y="1392" width="239" height="170" rx="7" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="365" y="1414" class="box-ttl">OpenStreetMap Tile Server</text>
+  <text x="365" y="1436" class="body">Menyediakan basemap peta dasar<tspan x="365" dy="15">Diakses langsung oleh peramban,</tspan><tspan x="365" dy="15">tidak melalui server aplikasi</tspan><tspan x="365" dy="15">Diizinkan melalui direktif img-src</tspan><tspan x="365" dy="15">pada Content-Security-Policy</tspan></text>
+
+  <rect x="610" y="1392" width="239" height="170" rx="7" fill="#ffffff" stroke="#b9a9e0" stroke-dasharray="5 4"/>
+  <text x="624" y="1414" class="box-ttl">Cloudflare Turnstile</text>
+  <text x="624" y="1431" class="mono">lib/validators/turnstile.js</text>
+  <text x="624" y="1452" class="body">Verifikasi token sisi server ke<tspan x="624" dy="15">endpoint siteverify Cloudflare</tspan><tspan x="624" dy="15">Dilewati saat NODE_ENV bukan</tspan><tspan x="624" dy="15">production</tspan><tspan x="624" dy="15">Modul tersedia namun belum</tspan><tspan x="624" dy="15">dirangkai ke /api/map-layer</tspan></text>
+
+  <rect x="869" y="1392" width="239" height="170" rx="7" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="883" y="1414" class="box-ttl">GEE Tile Server</text>
+  <text x="883" y="1431" class="mono">map.urlFormat</text>
+  <text x="883" y="1452" class="body">Melayani map tiles hasil<tspan x="883" dy="15">komputasi Google Earth Engine</tspan><tspan x="883" dy="15">Dikonsumsi LANGSUNG oleh</tspan><tspan x="883" dy="15">Leaflet di peramban pengguna</tspan><tspan x="883" dy="15">Tidak melewati server aplikasi</tspan><tspan x="883" dy="15">&#8594; hemat bandwidth &amp; latensi</tspan></text>
+
+  <!-- ==================== JALUR SAMPING KANAN : tile langsung ==================== -->
+  <path d="M 1108 1477 L 1160 1477 L 1160 300 L 1112 300" fill="none" stroke="#7a5cc4" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arwd)"/>
+  <text x="1152" y="890" class="gutter" fill="#7a5cc4" text-anchor="middle" transform="rotate(-90 1152 890)">map tiles dikirim langsung ke peramban (tidak melewati server aplikasi)</text>
+
+  <!-- ==================== JALUR SAMPING KIRI : aset statis ==================== -->
+  <path d="M 92 1233 L 44 1233 L 44 262 L 88 262" fill="none" stroke="#6a6a6a" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arwg)"/>
+  <text x="36" y="760" class="gutter" text-anchor="middle" transform="rotate(-90 36 760)">snapshot &amp; GeoJSON dimuat langsung sebagai berkas statis</text>
+
+  <!-- ============================ CATATAN ============================ -->
+  <text x="70" y="1612" class="note" font-weight="700">Catatan implementasi:</text>
+  <text x="70" y="1630" class="note">(1) Lapisan cache dan penghitung rate limit berbasis memori proses, sehingga pada penyebaran serverless keduanya bersifat per-instance dan tidak dibagi antar-instance.</text>
+  <text x="70" y="1646" class="note">(2) Blok bergaris putus-putus (Cloudflare Turnstile) menandakan modul yang telah tersedia di repositori namun belum dirangkai ke handler /api/map-layer.</text>
+  <text x="70" y="1662" class="note">(3) Berkas middleware pada repositori bernama proxy.js dengan config.matcher '/api/:path*'; verifikasi empiris pengujian 24 Juni 2026 menunjukkan lapisan ini aktif (429 pada permintaan ke-6).</text>
+</svg>

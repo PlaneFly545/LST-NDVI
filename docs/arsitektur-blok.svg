@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1030" width="900" height="1030" font-family="Segoe UI, Calibri, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3d4450"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b03a3a"/>
+    </marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a5cc4"/>
+    </marker>
+    <style>
+      .ttl  { font-size: 18px; font-weight: 700; fill: #10131a; }
+      .hdr  { font-size: 13.5px; font-weight: 700; letter-spacing: .4px; }
+      .shdr { font-size: 12.5px; font-weight: 700; }
+      .lbl  { font-size: 12px; font-weight: 600; fill: #14181f; }
+      .sub  { font-size: 10px; fill: #5c6472; }
+      .flow { font-size: 10.5px; fill: #3d4450; }
+      .rej  { font-size: 10.5px; font-weight: 600; fill: #b03a3a; }
+      .gut  { font-size: 10px; fill: #7a5cc4; }
+      .leg  { font-size: 10px; fill: #4a5262; }
+      .bnd  { font-size: 10px; fill: #8a93a0; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="1030" fill="#ffffff"/>
+  <text x="450" y="38" class="ttl" text-anchor="middle">Diagram Blok Arsitektur Client&#8211;Server</text>
+
+  <!-- ================= KLIEN ================= -->
+  <rect x="60" y="64" width="780" height="130" rx="10" fill="#eef4ff" stroke="#7fa3e8" stroke-width="2"/>
+  <text x="75" y="90" class="hdr" fill="#2b5cb8">KLIEN &#8212; Peramban Pengguna</text>
+
+  <rect x="75" y="104" width="240" height="76" rx="6" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="195" y="136" class="lbl" text-anchor="middle">Antarmuka Pengguna</text>
+  <text x="195" y="154" class="sub" text-anchor="middle">panel kontrol parameter</text>
+
+  <rect x="330" y="104" width="240" height="76" rx="6" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="450" y="136" class="lbl" text-anchor="middle">Grafik &amp; Statistik</text>
+  <text x="450" y="154" class="sub" text-anchor="middle">deret waktu, scatter, ringkasan</text>
+
+  <rect x="585" y="104" width="240" height="76" rx="6" fill="#ffffff" stroke="#c3d4f7"/>
+  <text x="705" y="136" class="lbl" text-anchor="middle">Peta Interaktif</text>
+  <text x="705" y="154" class="sub" text-anchor="middle">Leaflet</text>
+
+  <!-- batas klien-server + komunikasi REST -->
+  <line x1="44" y1="232" x2="856" y2="232" stroke="#b9c1cd" stroke-width="1.2" stroke-dasharray="7 5"/>
+  <text x="856" y="250" class="bnd" text-anchor="end">batas klien &#8211; server</text>
+
+  <line x1="300" y1="194" x2="300" y2="266" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="290" y="220" class="flow" text-anchor="end">Permintaan REST&#160;: GET /api/map-layer?parameter</text>
+
+  <line x1="600" y1="266" x2="600" y2="194" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="610" y="220" class="flow">Respons REST&#160;: JSON (tile peta, statistik, grafik)</text>
+
+  <!-- ================= SERVER ================= -->
+  <rect x="60" y="270" width="780" height="470" rx="10" fill="#f4f7f5" stroke="#5aa87a" stroke-width="2"/>
+  <text x="75" y="296" class="hdr" fill="#2f7d50">SERVER &#8212; Aplikasi Next.js</text>
+
+  <!-- --- middleware --- -->
+  <rect x="78" y="306" width="744" height="150" rx="8" fill="#fdeeee" stroke="#e8a9a9" stroke-width="1.5"/>
+  <text x="92" y="328" class="shdr" fill="#b03a3a">1 &#183; Middleware &#8212; gerbang masuk, dijalankan sekali per permintaan</text>
+
+  <rect x="90" y="340" width="350" height="100" rx="6" fill="#ffffff" stroke="#f3c9c9"/>
+  <text x="265" y="372" class="lbl" text-anchor="middle">Pemblokiran Agen Otomatis</text>
+  <text x="265" y="392" class="sub" text-anchor="middle">header User-Agent dicocokkan dengan pola bot</text>
+  <text x="265" y="418" class="rej" text-anchor="middle">cocok &#8594; ditolak (403)</text>
+
+  <rect x="462" y="340" width="350" height="100" rx="6" fill="#ffffff" stroke="#f3c9c9"/>
+  <text x="637" y="372" class="lbl" text-anchor="middle">Pembatasan Laju Permintaan</text>
+  <text x="637" y="392" class="sub" text-anchor="middle">fingerprint SHA-256 &#8594; kuota 5 permintaan / menit</text>
+  <text x="637" y="418" class="rej" text-anchor="middle">kuota terlampaui &#8594; ditolak (429)</text>
+
+  <!-- jalur penolakan kembali ke klien -->
+  <path d="M 78 400 L 34 400 L 34 150 L 55 150" fill="none" stroke="#b03a3a" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+  <text x="26" y="282" class="rej" text-anchor="middle" transform="rotate(-90 26 282)">ditolak &#8212; tidak mencapai logika aplikasi</text>
+
+  <!-- gerbang lolos -->
+  <line x1="300" y1="456" x2="300" y2="468" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="310" y="468" class="flow" fill="#2f7d50">lolos pemeriksaan</text>
+  <line x1="600" y1="468" x2="600" y2="456" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+
+  <!-- --- logika aplikasi --- -->
+  <rect x="78" y="472" width="744" height="250" rx="8" fill="#eaf7ef" stroke="#9ed0b4" stroke-width="1.5"/>
+  <text x="92" y="494" class="shdr" fill="#2f7d50">2 &#183; Logika Aplikasi &#8212; API Routes</text>
+
+  <rect x="90" y="506" width="168" height="110" rx="6" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="174" y="548" class="lbl" text-anchor="middle">Validasi</text>
+  <text x="174" y="565" class="lbl" text-anchor="middle">Parameter</text>
+  <text x="174" y="586" class="sub" text-anchor="middle">whitelist &amp; batas nilai</text>
+
+  <line x1="262" y1="561" x2="270" y2="561" stroke="#3d4450" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="274" y="506" width="168" height="110" rx="6" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="358" y="548" class="lbl" text-anchor="middle">Lapisan Cache</text>
+  <text x="358" y="569" class="sub" text-anchor="middle">kunci SHA-256</text>
+  <text x="358" y="585" class="sub" text-anchor="middle">dari parameter</text>
+
+  <line x1="446" y1="561" x2="454" y2="561" stroke="#3d4450" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="458" y="506" width="168" height="110" rx="6" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="542" y="542" class="lbl" text-anchor="middle">Autentikasi GEE</text>
+  <text x="542" y="563" class="sub" text-anchor="middle">Service Account</text>
+  <text x="542" y="579" class="sub" text-anchor="middle">kunci privat tidak</text>
+  <text x="542" y="595" class="sub" text-anchor="middle">pernah ke klien</text>
+
+  <line x1="630" y1="561" x2="638" y2="561" stroke="#3d4450" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="642" y="506" width="168" height="110" rx="6" fill="#ffffff" stroke="#bee3cc"/>
+  <text x="726" y="548" class="lbl" text-anchor="middle">Pemrosesan</text>
+  <text x="726" y="565" class="lbl" text-anchor="middle">Citra</text>
+  <text x="726" y="586" class="sub" text-anchor="middle">perakitan perintah GEE</text>
+
+  <rect x="90" y="632" width="720" height="74" rx="6" fill="#ffffff" stroke="#9ed0b4" stroke-dasharray="5 4"/>
+  <text x="104" y="655" class="lbl" fill="#2f7d50">Percabangan pada lapisan cache&#160;:</text>
+  <text x="104" y="676" class="flow"><tspan font-weight="600">HIT</tspan> &#8212; parameter sudah pernah dihitung &#8594; hasil dikembalikan langsung dari memori, GEE tidak dipanggil (&#177;43 ms)</text>
+  <text x="104" y="695" class="flow"><tspan font-weight="600">MISS</tspan> &#8212; parameter baru &#8594; lanjut ke autentikasi dan pemrosesan citra pada GEE (&#177;12 detik), hasil lalu disimpan ke cache</text>
+
+  <!-- server -> cloud -->
+  <line x1="300" y1="740" x2="300" y2="796" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="290" y="772" class="flow" text-anchor="end">perintah komputasi &#8212; hanya saat cache MISS</text>
+
+  <line x1="600" y1="796" x2="600" y2="740" stroke="#3d4450" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="610" y="772" class="flow">hasil komputasi &amp; tautan tile</text>
+
+  <!-- ================= CLOUD EKSTERNAL ================= -->
+  <rect x="60" y="800" width="780" height="160" rx="10" fill="#f3effa" stroke="#9c86d8" stroke-width="2"/>
+  <text x="75" y="826" class="hdr" fill="#5b44a8">LAYANAN CLOUD EKSTERNAL &#8212; pihak ketiga, di luar sistem</text>
+
+  <rect x="75" y="840" width="240" height="98" rx="6" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="195" y="874" class="lbl" text-anchor="middle">Google Earth Engine</text>
+  <text x="195" y="894" class="sub" text-anchor="middle">komputasi citra Landsat 8</text>
+  <text x="195" y="910" class="sub" text-anchor="middle">reduksi statistik &amp; deret waktu</text>
+
+  <rect x="330" y="840" width="240" height="98" rx="6" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="450" y="882" class="lbl" text-anchor="middle">OpenStreetMap</text>
+  <text x="450" y="902" class="sub" text-anchor="middle">peta dasar (basemap)</text>
+
+  <rect x="585" y="840" width="240" height="98" rx="6" fill="#ffffff" stroke="#d6ccee"/>
+  <text x="705" y="874" class="lbl" text-anchor="middle">GEE Tile Server</text>
+  <text x="705" y="894" class="sub" text-anchor="middle">penyaji map tiles hasil</text>
+  <text x="705" y="910" class="sub" text-anchor="middle">komputasi</text>
+
+  <!-- tile langsung ke peramban -->
+  <path d="M 825 889 L 866 889 L 866 142 L 829 142" fill="none" stroke="#7a5cc4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ad)"/>
+  <text x="858" y="515" class="gut" text-anchor="middle" transform="rotate(-90 858 515)">map tiles &amp; basemap diambil langsung oleh peramban</text>
+
+  <!-- legenda -->
+  <text x="60" y="990" class="leg">Garis putus-putus ungu&#160;: peramban mengambil map tiles dan basemap langsung dari server penyaji, tanpa melewati server aplikasi.</text>
+  <text x="60" y="1008" class="leg">Garis putus-putus merah&#160;: permintaan yang ditolak middleware berhenti di gerbang &#8212; tidak pernah mencapai logika aplikasi maupun GEE.</text>
+</svg>
