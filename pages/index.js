@@ -248,6 +248,15 @@ export default function Home() {
   // Helper: title case display for region names
   const toTitleCase = (str) => str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
+  // Helper: format durasi — di bawah 1 detik tampil dalam ms, sisanya dalam detik
+  const formatDuration = (ms) => {
+    if (typeof ms !== 'number' || !Number.isFinite(ms)) return null;
+    if (ms >= 1000) return `${(ms / 1000).toFixed(1).replace('.', ',')} s`;
+    // Cache hit bisa di bawah 1 ms, jadi desimal dipertahankan bila ada
+    const teks = Number.isInteger(ms) ? String(ms) : ms.toFixed(1);
+    return `${teks.replace('.', ',')} ms`;
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedCloudCover(cloudCover);
@@ -320,6 +329,10 @@ export default function Home() {
 
     const toastId = toast.loading(loadingMsg);
 
+    // Waktu pemrosesan server (dari API) + status cache (dari header X-Cache)
+    let serverMs = null;
+    let fromCache = false;
+
     try {
       const regionParam = region === 'Seluruh Bali' ? 'ALL' : region;
 
@@ -358,6 +371,10 @@ export default function Home() {
 
         const dataLeft = await resLeft.json();
         const dataRight = await resRight.json();
+
+        // Kedua request paralel — waktu tunggu nyata ≈ yang terlama
+        serverMs = Math.max(dataLeft.processing_time_ms ?? 0, dataRight.processing_time_ms ?? 0) || null;
+        fromCache = resLeft.headers.get('X-Cache') === 'HIT' && resRight.headers.get('X-Cache') === 'HIT';
 
         setMapUrl(dataLeft.map.urlFormat);
         setMapUrlRight(dataRight.map.urlFormat);
@@ -406,6 +423,10 @@ export default function Home() {
         }
 
         const data = await res.json();
+
+        serverMs = data.processing_time_ms ?? null;
+        fromCache = res.headers.get('X-Cache') === 'HIT';
+
         setMapUrl(data.map.urlFormat);
         setStats(data.stats);
         setChartData(data.chart);
@@ -413,7 +434,13 @@ export default function Home() {
         if (data.downloadUrl) setTiffUrl(data.downloadUrl);
       }
 
-      toast.success('Pemrosesan Selesai', { id: toastId });
+      const durasi = formatDuration(serverMs);
+      toast.success(
+        durasi
+          ? `Pemrosesan selesai dalam ${durasi}${fromCache ? ' (dari cache)' : ''}`
+          : 'Pemrosesan Selesai',
+        { id: toastId }
+      );
 
     } catch (error) {
       console.error(error);

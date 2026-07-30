@@ -20,6 +20,13 @@ export default async function handler(req, res) {
       return res.status(params.status).json({ error: params.error });
     }
 
+    // Stopwatch dimulai setelah validasi — request yang ditolak (400)
+    // tidak dihitung sebagai waktu pemrosesan.
+    // performance.now() dipakai (bukan Date.now()) karena cache hit bisa
+    // selesai di bawah 1 ms, yang akan membulat jadi 0 pada resolusi milidetik.
+    const startedAt = performance.now();
+    const elapsedMs = () => Math.round((performance.now() - startedAt) * 10) / 10;
+
     const {
       normalizedType, normalizedMode, normalizedReducer, normalizedGapFill,
       normalizedRegion, startDateInput, endDateInput, startDateObj, endDateObj,
@@ -38,7 +45,7 @@ export default async function handler(req, res) {
     const cached = getCached(cacheKey);
     if (cached) {
       res.setHeader('X-Cache', 'HIT');
-      return res.status(200).json(cached);
+      return res.status(200).json({ ...cached, processing_time_ms: elapsedMs() });
     }
     res.setHeader('X-Cache', 'MISS');
 
@@ -87,8 +94,10 @@ export default async function handler(req, res) {
     }
 
     // ── 6. Cache & respond ───────────────────────────────────────────────────
+    // Payload yang di-cache sengaja tidak memuat processing_time_ms, supaya
+    // cache HIT melaporkan durasi lookup-nya sendiri, bukan durasi komputasi lama.
     setCache(cacheKey, responsePayload);
-    return res.status(200).json(responsePayload);
+    return res.status(200).json({ ...responsePayload, processing_time_ms: elapsedMs() });
 
   } catch (error) {
     safeErrorLog('GEE Error (sanitized response):', {
