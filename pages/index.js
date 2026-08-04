@@ -106,6 +106,21 @@ export default function Home() {
   // Modal Evaluasi UEQ
   const [showUeqModal, setShowUeqModal] = useState(false);
 
+  // Pengingat evaluasi (lonceng) — user boleh menyembunyikannya secara permanen.
+  // Pilihan disimpan di localStorage agar tidak muncul lagi setiap reload.
+  const BELL_KEY = 'ecomonitor_bell_hidden';
+  const [isBellHidden, setBellHidden] = useState(false);
+
+  const handleHideBell = () => {
+    setBellHidden(true);
+    setShowUeqModal(false);
+    if (typeof window !== 'undefined') localStorage.setItem(BELL_KEY, '1');
+    toast('Pengingat evaluasi disembunyikan.', {
+      description: 'Kuesioner tetap bisa dibuka lewat menu "Evaluasi UEQ".',
+      duration: 5000,
+    });
+  };
+
   const currentYear = new Date().getFullYear();
   const [targetYear, setTargetYear] = useState(currentYear + 5);
 
@@ -122,6 +137,11 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       if (!localStorage.getItem(TOUR_KEY)) {
         setIsTourActive(true);
+      }
+
+      // Hormati pilihan user yang sudah menyembunyikan lonceng sebelumnya
+      if (localStorage.getItem(BELL_KEY)) {
+        setBellHidden(true);
       }
 
       // Override Leaflet TileLayer secara dinamis di sisi client untuk menyembunyikan label saat demo
@@ -1096,18 +1116,31 @@ export default function Home() {
         </div>
 
         {/* --- Tombol Lonceng Melayang (FAB) --- */}
-        {!showUeqModal && (
-          <button 
-            onClick={() => setShowUeqModal(true)}
-            className="absolute top-4 right-4 md:top-6 md:right-6 z-[2000] bg-rose-500 text-white p-3.5 md:p-4 rounded-full shadow-lg hover:bg-rose-600 hover:scale-105 transition-all flex items-center justify-center border-4 border-white/40 group"
-            title="Isi Evaluasi UEQ"
-          >
-            <BellRing size={22} className="animate-ringing" />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-400"></span>
-            </span>
-          </button>
+        {/* Tombol × dan lonceng harus bersebelahan, bukan bersarang —
+            <button> di dalam <button> tidak valid dan tidak bisa diklik. */}
+        {!showUeqModal && !isBellHidden && (
+          <div className="absolute top-4 right-4 md:top-6 md:right-6 z-[2000]">
+            <button
+              onClick={() => setShowUeqModal(true)}
+              className="relative bg-rose-500 text-white p-3.5 md:p-4 rounded-full shadow-lg hover:bg-rose-600 hover:scale-105 transition-all flex items-center justify-center border-4 border-white/40 group"
+              title="Isi Evaluasi UEQ"
+            >
+              <BellRing size={22} className="animate-ringing" />
+              <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-400"></span>
+              </span>
+            </button>
+
+            <button
+              onClick={handleHideBell}
+              className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-white text-slate-500 shadow-md border border-slate-200 flex items-center justify-center hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+              aria-label="Sembunyikan pengingat evaluasi"
+              title="Sembunyikan pengingat ini"
+            >
+              <X size={13} strokeWidth={3} />
+            </button>
+          </div>
         )}
 
         {/* --- Modal Pop-up Evaluasi UEQ --- */}
