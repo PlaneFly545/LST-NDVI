@@ -143,7 +143,6 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
   const [targetYear, setTargetYear] = useState(currentYear + 5);
 
-  // BARU: State untuk metode Gap Filling
   const [gapFill, setGapFill] = useState('none');
 
   // ── Tour State ──
@@ -441,7 +440,7 @@ export default function Home() {
           vis_max: visMax,
           threshold: threshold,
           target_year: targetYear,
-          gap_fill: gapFill // BARU: Parameter gap_fill
+          gap_fill: gapFill
         });
 
         const res = await fetch(`/api/map-layer?${params}`);
@@ -870,7 +869,6 @@ export default function Home() {
                 <button onClick={() => handleSwitchMode('history')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'history' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
                   <History size={16} /> Historis
                 </button>
-                {/* PERBAIKAN: Atribut disabled dihapus agar user bisa langsung pindah ke prediksi kapan saja */}
                 <button onClick={() => handleSwitchMode('prediksi')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${analysisMode === 'prediksi' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
                   <TrendingUp size={16} /> Prediksi
                 </button>
@@ -1004,7 +1002,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* BARU: METODE GAP FILLING (Hanya tampil di mode Historis) */}
+              {/* Metode gap filling — hanya relevan di mode historis */}
               {analysisMode !== 'prediksi' && (
                 <div className="pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-center gap-1.5 mb-4">
