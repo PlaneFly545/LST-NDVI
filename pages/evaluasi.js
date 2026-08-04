@@ -106,15 +106,6 @@ export default function Evaluasi() {
         setErrorMessage(null);
     };
 
-    const handleQuickFill = (value) => {
-        const newAnswers = { ...answers };
-        currentCategory.items.forEach(item => {
-            newAnswers[item.id] = value;
-        });
-        setAnswers(newAnswers);
-        setErrorMessage(null);
-    };
-
     const handlePrevCategory = () => {
         if (currentCategoryIndex > 0) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -282,29 +273,6 @@ export default function Evaluasi() {
                             </span>
                         </div>
                     </div>
-                </div>
-
-                {/* Quick Fill Panel */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 bg-slate-50 p-4 md:p-5 rounded-xl border border-slate-200 mb-6">
-                    <span className="w-full md:w-1/4 text-center md:text-right text-sm font-medium text-slate-500">
-                        Penilaian Serentak
-                    </span>
-
-                    <div className="flex justify-center w-full md:w-auto space-x-1.5 md:space-x-3">
-                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                            <button
-                                key={`quick-${num}`}
-                                onClick={() => handleQuickFill(num)}
-                                className="touch-manipulation outline-none cursor-pointer"
-                            >
-                                <div className="relative w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border border-slate-200 bg-white text-slate-600 text-sm md:text-base font-bold flex items-center justify-center hover:bg-slate-100 hover:border-slate-300 transition-all duration-200 active:scale-95">
-                                    {num}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    <span className="w-full md:w-1/4 hidden md:block"></span>
                 </div>
 
                 {/* Question Items */}
