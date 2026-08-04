@@ -32,6 +32,25 @@ const MapWithNoSSR = dynamic(() => import('../components/Map'), {
   )
 });
 
+// Batas Rentang Visualisasi per jenis layer. Harus berada DI DALAM batas server
+// (lib/validators/queryParams.js: NDVI -1..1, LST -50..80). Kalau input dibiarkan
+// melebihi batas server, server meng-clamp diam-diam dan legenda peta akan
+// menampilkan skala yang tidak dipakai GEE.
+//
+// NDVI -1..1 mengikuti sifat rumusnya. LST dipersempit ke 0..70 °C — rentang
+// suhu permukaan yang wajar untuk wilayah tropis.
+const LAYER_BOUNDS = {
+  ndvi: { min: -1,  max: 1,  defMin: -1, defMax: 1  },
+  lst:  { min: 0,   max: 70, defMin: 20, defMax: 45 },
+};
+
+/** Batasi angka ke rentang [lo, hi]; kembalikan fallback bila bukan angka. */
+const clampNum = (raw, lo, hi, fallback) => {
+  const n = parseFloat(raw);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(Math.max(n, lo), hi);
+};
+
 const MapLegend = ({ type, min, max }) => {
   const gradient = type === 'ndvi'
     ? 'linear-gradient(to right, #ef4444, #facc15, #22c55e)'
@@ -652,6 +671,27 @@ export default function Home() {
     ? 'linear-gradient(to right, #ef4444, #facc15, #22c55e)'
     : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
 
+  // ── Batas input Rentang Visualisasi ──
+  // Nilai user tidak pernah dikoreksi belakangan; yang dijaga adalah pintu
+  // masuknya, sehingga angka di legenda selalu sama dengan yang dipakai GEE.
+  const visBounds = LAYER_BOUNDS[layerType];
+
+  // Ketikan setengah jadi ('', '-', '25.') dibiarkan apa adanya supaya user
+  // tetap bisa mengetik nilai negatif dan desimal tanpa terpotong.
+  const isPartialNumber = (raw) => raw === '' || raw === '-' || raw.endsWith('.');
+
+  const handleVisInput = (setter) => (e) => {
+    const raw = e.target.value;
+    if (isPartialNumber(raw)) return setter(raw);
+    if (Number.isNaN(parseFloat(raw))) return;
+    setter(clampNum(raw, visBounds.min, visBounds.max, visBounds.min));
+  };
+
+  // Rapikan saat fokus berpindah: ketikan setengah jadi / kosong dikembalikan
+  // ke nilai bawaan layer agar tidak ada nilai tak sah yang ikut terkirim.
+  const handleVisBlur = (setter, fallback) => (e) =>
+    setter(clampNum(e.target.value, visBounds.min, visBounds.max, fallback));
+
   // Komponen Helper untuk menyatukan render Grafik
   const renderChartSection = () => {
     const isSplit = visualMode === 'split';
@@ -928,10 +968,29 @@ export default function Home() {
                   </div>
                   <div className="w-full h-2 rounded-full mb-2" style={{ background: visGradient }}></div>
                   <div className="flex items-center gap-2">
-                    <input type="number" step="0.1" value={visMin} onChange={(e) => setVisMin(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center" placeholder="Min" />
+                    <input
+                      type="number" step="0.1"
+                      min={visBounds.min} max={visBounds.max}
+                      value={visMin}
+                      onChange={handleVisInput(setVisMin)}
+                      onBlur={handleVisBlur(setVisMin, visBounds.defMin)}
+                      className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center"
+                      placeholder="Min"
+                    />
                     <span className="text-slate-300 text-xs">—</span>
-                    <input type="number" step="0.1" value={visMax} onChange={(e) => setVisMax(parseFloat(e.target.value) || 0)} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center" placeholder="Max" />
+                    <input
+                      type="number" step="0.1"
+                      min={visBounds.min} max={visBounds.max}
+                      value={visMax}
+                      onChange={handleVisInput(setVisMax)}
+                      onBlur={handleVisBlur(setVisMax, visBounds.defMax)}
+                      className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600 text-center"
+                      placeholder="Max"
+                    />
                   </div>
+                  <p className="mt-2 text-[10px] text-slate-400 text-center">
+                    Rentang {layerType === 'ndvi' ? 'NDVI' : 'suhu'} yang diizinkan: {visBounds.min} s/d {visBounds.max}
+                  </p>
                 </div>
 
                 <div className="px-4 py-3 mt-3 bg-slate-50 border border-slate-100 rounded-lg">
