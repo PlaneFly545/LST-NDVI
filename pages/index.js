@@ -1319,7 +1319,15 @@ export default function Home() {
 
         {/* === MAP AREA === */}
         <div id="tour-map-area" className="relative flex-1 bg-slate-100 flex">
-          <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
+          {/* clipGeoJson hanya diisi saat satu kabupaten dipilih. "Seluruh Bali"
+              dibiarkan utuh supaya tampilannya sama persis seperti sebelumnya. */}
+          <MapWithNoSSR
+            mapUrl={mapUrl}
+            mapUrlRight={mapUrlRight}
+            isSplit={visualMode === 'split'}
+            selectedGeoJson={selectedGeoJson}
+            clipGeoJson={region === 'Seluruh Bali' ? null : selectedGeoJson}
+          />
           {hasResult && (
             <MapLegend
               type={layerType}

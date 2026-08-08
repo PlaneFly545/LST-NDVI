@@ -1,15 +1,128 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
 
-// Catatan: wilayah terpilih ditandai lewat auto-zoom (MapFocus) dan nama wilayah
-// di panel statistik — bukan lewat garis batas atau peredup di atas peta.
-// Keduanya pernah dicoba dan justru menutupi visualisasi LST/NDVI-nya.
+// Catatan: wilayah terpilih ditandai lewat auto-zoom (MapFocus), pemangkasan
+// ubin ke batas wilayah (ClipToRegion), dan nama wilayah di panel statistik —
+// bukan lewat garis batas atau peredup di atas peta. Keduanya pernah dicoba dan
+// justru menutupi visualisasi LST/NDVI-nya.
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Kumpulkan seluruh cincin poligon dari sebuah GeoJSON (Polygon/MultiPolygon). */
+function collectRings(geoJson) {
+  const geometries = geoJson?.type === 'FeatureCollection'
+    ? (geoJson.features || []).map((f) => f?.geometry)
+    : [geoJson?.type === 'Feature' ? geoJson.geometry : geoJson];
+
+  const rings = [];
+  for (const geometry of geometries) {
+    if (!geometry) continue;
+    if (geometry.type === 'Polygon') rings.push(...geometry.coordinates);
+    // Klungkung terdiri dari daratan utama + Nusa Penida, jadi MultiPolygon
+    // wajib ditangani — kalau tidak, pulau keduanya ikut terpangkas hilang.
+    else if (geometry.type === 'MultiPolygon') {
+      for (const polygon of geometry.coordinates) rings.push(...polygon);
+    }
+  }
+  return rings;
+}
+
+/**
+ * Pangkas ubin GEE ke batas wilayah terpilih.
+ *
+ * Citra dari server sengaja tidak lagi dipotong per kabupaten: satu komputasi
+ * dipakai ulang untuk semua wilayah supaya cache bekerja dan perpindahan
+ * wilayah tidak memanggil GEE lagi. Konsekuensinya warna LST/NDVI menutupi
+ * seluruh pulau, jadi memilih satu kabupaten terlihat sama saja dengan memilih
+ * seluruh Bali. Pemotongannya dikembalikan di sini, di sisi peramban.
+ *
+ * Di luar wilayah tidak ada yang digambar — peta dasar tampil apa adanya.
+ * Ini bukan peredup dan bukan garis batas: tidak ada satu piksel pun yang
+ * ditumpuk di atas visualisasi.
+ */
+function ClipToRegion({ geoJson, container }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!container) return;
+
+    const rings = geoJson ? collectRings(geoJson) : [];
+    if (rings.length === 0) {
+      container.style.clipPath = '';
+      return;
+    }
+
+    const clipId = `region-clip-${L.Util.stamp(container)}`;
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', '0');
+    svg.setAttribute('height', '0');
+    svg.style.position = 'absolute';
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const clipPath = document.createElementNS(SVG_NS, 'clipPath');
+    clipPath.setAttribute('id', clipId);
+    // Koordinat ditulis dalam piksel ruang layer Leaflet, bukan relatif terhadap
+    // ukuran elemen — wadah TileLayer sendiri tidak punya ukuran.
+    clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('clip-rule', 'evenodd');
+    clipPath.appendChild(path);
+    defs.appendChild(clipPath);
+    svg.appendChild(defs);
+    map.getContainer().appendChild(svg);
+
+    const redraw = () => {
+      try {
+        const d = rings
+          .map((ring) => {
+            const titik = ring.map(([lng, lat]) => {
+              const p = map.latLngToLayerPoint([lat, lng]);
+              return `${Math.round(p.x)} ${Math.round(p.y)}`;
+            });
+            return titik.length ? `M${titik.join('L')}Z` : '';
+          })
+          .join('');
+
+        if (!d) {
+          container.style.clipPath = '';
+          return;
+        }
+        path.setAttribute('d', d);
+        container.style.clipPath = `url(#${clipId})`;
+      } catch {
+        // Kalau pemangkasan gagal karena alasan apa pun, peta tetap harus
+        // tampil — lebih baik tidak terpangkas daripada layer hilang total.
+        container.style.clipPath = '';
+      }
+    };
+
+    redraw();
+    // Titik layer bergeser saat zoom dan saat Leaflet menata ulang origin-nya;
+    // geser peta biasa tidak mengubahnya, tapi ikut dipantau karena murah.
+    map.on('zoomend viewreset moveend resize', redraw);
+
+    return () => {
+      map.off('zoomend viewreset moveend resize', redraw);
+      container.style.clipPath = '';
+      svg.remove();
+    };
+  }, [geoJson, container, map]);
+
+  return null;
+}
 
 // Helper: Update layer gambar dari GEE (TileLayer) atau ImageOverlay lokal untuk demo
-function MapLayer({ url }) {
-  const map = useMap();
+function MapLayer({ url, clipGeoJson }) {
+  const [container, setContainer] = useState(null);
+
+  // Identitasnya harus tetap: ref sebaris akan dilepas-pasang ulang setiap
+  // render, dan setState di dalamnya memicu render berikutnya tanpa henti.
+  const handleLayerRef = useCallback((layer) => {
+    setContainer(layer ? layer.getContainer() : null);
+  }, []);
+
   if (!url) return null;
 
   const isStaticImage = url.endsWith('.png') || url.endsWith('.webp') || url.includes('/data/') || url.includes('/images/');
@@ -22,7 +135,12 @@ function MapLayer({ url }) {
     return <ImageOverlay url={url} bounds={baliBounds} opacity={0.75} attribution="EcoMonitor Demo Data" />;
   }
 
-  return <TileLayer url={url} attribution="Google Earth Engine" />;
+  return (
+    <>
+      <TileLayer url={url} attribution="Google Earth Engine" ref={handleLayerRef} />
+      <ClipToRegion geoJson={clipGeoJson} container={container} />
+    </>
+  );
 }
 
 // Helper: Auto-Focus kamera ke wilayah terpilih
@@ -77,7 +195,7 @@ function SyncCenter({ viewState, setViewState }) {
   return null;
 }
 
-const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
+const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson, clipGeoJson }) => {
   const [viewState, setViewState] = useState({ center: [-8.409518, 115.188919], zoom: 9 });
 
   // State untuk Draggable Split Screen
@@ -157,7 +275,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
               attribution='&copy; OpenStreetMap contributors'
             />
             {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
-            {mapUrl && <MapLayer url={mapUrl} />}
+            {mapUrl && <MapLayer url={mapUrl} clipGeoJson={clipGeoJson} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider">
@@ -174,7 +292,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
             />
             {/* Tanpa MapFocus di sini — fokus wilayah dipegang peta kiri, dan
                 peta ini mengikutinya lewat SyncCenter. */}
-            {mapUrlRight && <MapLayer url={mapUrlRight} />}
+            {mapUrlRight && <MapLayer url={mapUrlRight} clipGeoJson={clipGeoJson} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className={`absolute z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}>
@@ -229,7 +347,7 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
       {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
 
       {/* Layer GEE */}
-      {mapUrl && <MapLayer url={mapUrl} />}
+      {mapUrl && <MapLayer url={mapUrl} clipGeoJson={clipGeoJson} />}
     </MapContainer>
   );
 };
