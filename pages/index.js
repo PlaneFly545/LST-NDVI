@@ -385,24 +385,12 @@ export default function Home() {
 
   const handleRegionChange = (e) => {
     const newRegion = e.target.value;
-    // Sudah ada hasil di layar? Dicatat sebelum resetData mengosongkannya.
-    const adaHasil = !!stats;
-
     setRegion(newRegion);
     if (newRegion === 'Seluruh Bali') setSelectedGeoJson(baliData);
     else {
       const feature = baliData.features.find(f => f.properties.nm_kabkota === newRegion);
       if (feature) setSelectedGeoJson(feature);
     }
-
-    // Angka wilayah lama dibuang dulu supaya tidak sempat terbaca sebagai angka
-    // wilayah baru, lalu langsung diambil ulang. Server menghitung seluruh
-    // kabupaten dalam satu permintaan dan menyimpannya di cache, jadi pindah
-    // wilayah biasanya kembali seketika — itulah gunanya cache lintas wilayah.
-    // Kalau belum ada hasil sama sekali, jangan memicu perhitungan yang tidak
-    // diminta: user menekan tombol prosesnya sendiri.
-    resetData();
-    if (adaHasil) fetchData({ regionOverride: newRegion });
   };
 
   const handleTypeChange = (type) => {
@@ -420,10 +408,10 @@ export default function Home() {
   // Parameter permintaan mode tunggal. Dipakai bersama oleh proses analisis dan
   // penyiapan berkas unduhan, supaya keduanya tidak pernah menghitung citra yang
   // berbeda tanpa disadari.
-  const buildSingleModeParams = (regionName = region) => new URLSearchParams({
+  const buildSingleModeParams = () => new URLSearchParams({
     mode: analysisMode,
     type: layerType,
-    region_name: regionName === 'Seluruh Bali' ? 'ALL' : regionName,
+    region_name: region === 'Seluruh Bali' ? 'ALL' : region,
     start_date: startDate.toISOString().split('T')[0],
     end_date: endDate.toISOString().split('T')[0],
     cloud_cover: debouncedCloudCover,
@@ -460,16 +448,12 @@ export default function Home() {
     }
   };
 
-  const fetchData = async ({ regionOverride } = {}) => {
+  const fetchData = async () => {
     // Nomor permintaan ini. Kalau saat respons tiba nomornya sudah tidak
-    // berlaku — user berpindah mode, wilayah, atau jenis layer di tengah
-    // proses — hasilnya dibuang, bukan dipasang ke layar yang sudah berubah.
+    // berlaku — user berpindah mode atau jenis layer di tengah proses —
+    // hasilnya dibuang, bukan dipasang ke layar yang sudah berubah.
     const requestId = ++requestIdRef.current;
     const isStale = () => requestId !== requestIdRef.current;
-
-    // Wilayah dibaca dari argumen bila dipanggil dari handler yang baru saja
-    // meng-set state-nya; setState belum terlihat di dalam handler yang sama.
-    const activeRegion = regionOverride ?? region;
 
     setLoading(true);
     toast.dismiss();
@@ -486,7 +470,7 @@ export default function Home() {
     let fromCache = false;
 
     try {
-      const regionParam = activeRegion === 'Seluruh Bali' ? 'ALL' : activeRegion;
+      const regionParam = region === 'Seluruh Bali' ? 'ALL' : region;
 
       if (visualMode === 'split') {
         const paramsLeft = new URLSearchParams({
@@ -543,7 +527,7 @@ export default function Home() {
         setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
 
       } else {
-        const params = buildSingleModeParams(activeRegion);
+        const params = buildSingleModeParams();
 
         const res = await fetch(`/api/map-layer?${params}`);
 
