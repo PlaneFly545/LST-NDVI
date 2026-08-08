@@ -10,7 +10,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import {
   Leaf, ThermometerSun, Activity, Menu, Download, FileDown,
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
-  TrendingUp, History, Square, Columns, Info, BookOpen,
+  TrendingUp, History, Info, BookOpen,
   PanelLeftOpen, PanelLeftClose, MapPin, X, ClipboardList,
   Satellite, BarChart3, BellRing
 } from 'lucide-react';
@@ -1052,10 +1052,10 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="flex bg-slate-100 p-1.5 rounded-lg">
                     <button onClick={() => handleVisualModeChange('tunggal')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'tunggal' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
-                      <Square size={16} /> Tunggal
+                      Tunggal
                     </button>
                     <button onClick={() => handleVisualModeChange('split')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'split' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
-                      <Columns size={16} /> Perbandingan Periode
+                      Perbandingan Periode
                     </button>
                   </div>
                 </div>
