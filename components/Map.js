@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
@@ -9,6 +9,22 @@ import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
 // justru menutupi visualisasi LST/NDVI-nya.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// Ubin GEE ditaruh di pane-nya sendiri, bukan menumpang pane ubin bawaan.
+// Pane inilah yang dipangkas — kalau peta dasar ikut terpangkas, di luar
+// wilayah tidak akan tersisa apa-apa selain putih kosong.
+const GEE_PANE = 'gee-tiles';
+const GEE_PANE_Z = 250; // di atas ubin peta dasar (200), di bawah overlay (400)
+
+/** Siapkan pane khusus ubin GEE; aman dipanggil berulang. */
+function ensureGeePane(map) {
+  let pane = map.getPane(GEE_PANE);
+  if (!pane) {
+    pane = map.createPane(GEE_PANE);
+    pane.style.zIndex = String(GEE_PANE_Z);
+  }
+  return pane;
+}
 
 /** Kumpulkan seluruh cincin poligon dari sebuah GeoJSON (Polygon/MultiPolygon). */
 function collectRings(geoJson) {
@@ -42,10 +58,15 @@ function collectRings(geoJson) {
  * Ini bukan peredup dan bukan garis batas: tidak ada satu piksel pun yang
  * ditumpuk di atas visualisasi.
  */
-function ClipToRegion({ geoJson, container }) {
+function ClipToRegion({ geoJson }) {
   const map = useMap();
 
   useEffect(() => {
+    // Pane diambil langsung dari peta, tidak lewat ref layer. Ref dipasang
+    // React pada fase layout, sedangkan react-leaflet baru menempelkan layer
+    // ke peta di useEffect yang jalan belakangan — elemennya belum ada saat
+    // ref dipanggil, dan ref tidak pernah dipanggil ulang setelahnya.
+    const container = ensureGeePane(map);
     if (!container) return;
 
     const rings = geoJson ? collectRings(geoJson) : [];
@@ -108,20 +129,19 @@ function ClipToRegion({ geoJson, container }) {
       container.style.clipPath = '';
       svg.remove();
     };
-  }, [geoJson, container, map]);
+  }, [geoJson, map]);
 
   return null;
 }
 
 // Helper: Update layer gambar dari GEE (TileLayer) atau ImageOverlay lokal untuk demo
 function MapLayer({ url, clipGeoJson }) {
-  const [container, setContainer] = useState(null);
+  const map = useMap();
 
-  // Identitasnya harus tetap: ref sebaris akan dilepas-pasang ulang setiap
-  // render, dan setState di dalamnya memicu render berikutnya tanpa henti.
-  const handleLayerRef = useCallback((layer) => {
-    setContainer(layer ? layer.getContainer() : null);
-  }, []);
+  // Dibuat saat render, bukan di dalam effect: TileLayer di bawah menempel ke
+  // peta lebih dulu daripada effect mana pun, dan Leaflet melempar error kalau
+  // pane yang dirujuknya belum ada.
+  ensureGeePane(map);
 
   if (!url) return null;
 
@@ -137,8 +157,8 @@ function MapLayer({ url, clipGeoJson }) {
 
   return (
     <>
-      <TileLayer url={url} attribution="Google Earth Engine" ref={handleLayerRef} />
-      <ClipToRegion geoJson={clipGeoJson} container={container} />
+      <TileLayer url={url} attribution="Google Earth Engine" pane={GEE_PANE} />
+      <ClipToRegion geoJson={clipGeoJson} />
     </>
   );
 }
