@@ -49,7 +49,7 @@ const LAYER_BOUNDS = {
 // sehingga pembaca tidak yakin ketiganya merujuk hal yang sama.
 // NDVI sengaja tanpa satuan — indeks rasio memang tidak bersatuan.
 const LAYER_LABEL = {
-  ndvi: { short: 'NDVI', full: 'Indeks Vegetasi (NDVI)', unit: '',   axis: 'NDVI' },
+  ndvi: { short: 'NDVI', full: 'Indeks Vegetasi (NDVI)', unit: '',   axis: 'Indeks Vegetasi (NDVI)' },
   lst:  { short: 'LST',  full: 'Suhu Permukaan (LST)',   unit: '°C', axis: 'Suhu Permukaan (°C)' },
 };
 
@@ -814,6 +814,20 @@ export default function Home() {
     const chartAxisLabel = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).axis;
     const chartUnit = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).unit;
 
+    // Kedua grafik memakai margin, lebar sumbu, dan gaya label yang sama supaya
+    // judul sumbu tidak berpindah-pindah posisi saat tab grafik ditukar.
+    const chartMargin = { top: 10, right: 12, bottom: 16, left: 0 };
+    const axisTick = { fontSize: 11, fill: '#64748b' };
+    const axisTitleX = (value) => ({
+      value, position: 'insideBottom', offset: -6, fontSize: 11, fill: '#64748b',
+    });
+    // textAnchor 'middle' wajib: tanpa itu teks tegak ditarik dari titik tengah
+    // ke atas sehingga terpotong di tepi grafik.
+    const axisTitleY = (value) => ({
+      value, angle: -90, position: 'insideLeft', offset: 6,
+      fontSize: 11, fill: '#64748b', style: { textAnchor: 'middle' },
+    });
+
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
         <div className="flex items-center justify-center mb-4 relative min-h-7">
@@ -838,18 +852,24 @@ export default function Home() {
         <div className="h-56 w-full relative">
           <ResponsiveContainer>
             {chartMode === 'trend' ? (
-              <LineChart data={displayChartData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
+              <LineChart data={displayChartData} margin={chartMargin}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                 {/* Sumbu X memakai tahun, bukan tanggal: tiap titik adalah
                     rata-rata sepanjang tahun, bukan pengukuran 1 Januari. */}
-                <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                <XAxis
+                  dataKey="year"
+                  tick={axisTick}
+                  tickLine={false}
+                  axisLine={false}
+                  label={axisTitleX('Tahun')}
+                />
                 <YAxis
                   domain={['auto', 'auto']}
                   width={64}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  label={{ value: chartAxisLabel, angle: -90, position: 'insideLeft', fontSize: 11, fill: '#64748b' }}
+                  label={axisTitleY(chartAxisLabel)}
                 />
                 <Tooltip
                   contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
@@ -866,11 +886,39 @@ export default function Home() {
                 )}
               </LineChart>
             ) : (
-              <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
+              <ScatterChart margin={chartMargin}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
-                <XAxis type="number" dataKey="ndvi" name="NDVI" domain={[-1, 1]} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} label={{ value: 'NDVI (Vegetasi)', position: 'insideBottom', offset: -5, fontSize: 11, fill: '#64748b' }} />
-                <YAxis type="number" dataKey="lst" name="LST" unit="°C" domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} label={{ value: 'LST (°C)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#64748b' }} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                {/* Satuan hanya ditulis sekali di judul sumbu, tidak diulang di
+                    tiap angka skala, mengikuti kaidah penulisan grafik ilmiah. */}
+                <XAxis
+                  type="number"
+                  dataKey="ndvi"
+                  name={LAYER_LABEL.ndvi.full}
+                  domain={[-1, 1]}
+                  tick={axisTick}
+                  tickLine={false}
+                  axisLine={false}
+                  label={axisTitleX(LAYER_LABEL.ndvi.full)}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="lst"
+                  name={LAYER_LABEL.lst.full}
+                  domain={['auto', 'auto']}
+                  width={64}
+                  tick={axisTick}
+                  tickLine={false}
+                  axisLine={false}
+                  label={axisTitleY(LAYER_LABEL.lst.axis)}
+                />
+                <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                  formatter={(value, name) => [
+                    withUnit(Number(value).toFixed(2), name === LAYER_LABEL.lst.full ? LAYER_LABEL.lst.unit : LAYER_LABEL.ndvi.unit),
+                    name,
+                  ]}
+                />
                 <Scatter name="Sampel Korelasi" data={activeSData} fill={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} opacity={0.6} line={false} shape="circle" />
 
                 {trendData?.segment && (
