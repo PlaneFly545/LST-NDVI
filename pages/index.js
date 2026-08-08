@@ -379,6 +379,10 @@ export default function Home() {
       const feature = baliData.features.find(f => f.properties.nm_kabkota === newRegion);
       if (feature) setSelectedGeoJson(feature);
     }
+    // Hasil lama dibersihkan seperti pada pergantian mode dan jenis layer.
+    // Tanpa ini, panel masih menampilkan angka wilayah sebelumnya sementara
+    // dropdown sudah menunjuk wilayah baru — statistik jadi salah label.
+    resetData();
   };
 
   const handleTypeChange = (type) => {

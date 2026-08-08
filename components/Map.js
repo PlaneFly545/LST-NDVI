@@ -49,6 +49,13 @@ function MapFocus({ geoJson }) {
 }
 
 // Helper: Sinkronisasi kamera antara dua peta untuk Split Screen
+//
+// PENTING: hanya satu peta yang boleh memegang MapFocus. SyncCenter menulis
+// viewState pada setiap event `move`, dan efek di bawah membalasnya dengan
+// setView({ animate: false }) — yang membatalkan animasi flyToBounds yang
+// sedang berjalan. Kalau kedua peta sama-sama ber-MapFocus, keduanya saling
+// memotong animasi di tengah jalan dan kamera bisa berhenti di tempat yang
+// bukan wilayah terpilih.
 function SyncCenter({ viewState, setViewState }) {
   const map = useMapEvents({
     move: () => {
@@ -165,7 +172,8 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; OpenStreetMap contributors'
             />
-            {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
+            {/* Tanpa MapFocus di sini — fokus wilayah dipegang peta kiri, dan
+                peta ini mengikutinya lewat SyncCenter. */}
             {mapUrlRight && <MapLayer url={mapUrlRight} />}
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
