@@ -83,23 +83,31 @@ const sections = [
   {
     id: 'prediction',
     icon: TrendingUp,
-    title: 'Model Prediksi Linear',
+    title: 'Model Prediksi Harmonik',
     color: 'violet',
-    content: 'Mode prediksi menggunakan regresi linear temporal (OLS) yang diimplementasikan melalui ee.Reducer.linearFit() di Google Earth Engine.',
-    formula: 'Value(t) = scale × t + offset',
-    formulaSub: 'scale: koefisien tren per tahun    |    offset: intercept regresi',
+    content: 'Mode prediksi memisahkan komponen musiman dari tren jangka panjang menggunakan regresi harmonik per piksel, diimplementasikan melalui ee.Reducer.linearRegression() di Google Earth Engine.',
+    formula: 'y(t) = b₀ + b₁t + c₁cos(2πt) + s₁sin(2πt) + c₂cos(4πt) + s₂sin(4πt)',
+    formulaSub: 't: tahun pecahan dikurangi 2013    |    b₁: koefisien tren per tahun',
     subsections: [
       {
         title: 'Implementasi GEE',
-        body: 'Setiap piksel dalam koleksi ditambahkan band "time" (fractional year). ee.Reducer.linearFit() mengestimasi koefisien scale dan offset per piksel secara paralel. Proyeksi dihitung dengan mengsubstitusikan target_year ke dalam persamaan.'
+        body: 'Setiap citra dilengkapi enam band prediktor: konstanta, waktu t, serta dua pasang suku sinus-kosinus untuk siklus tahunan dan setengah tahunan. ee.Reducer.linearRegression({numX: 6, numY: 1}) mengestimasi keenam koefisien per piksel secara paralel. Waktu dipusatkan ke tahun 2013 agar matriks desainnya tidak ill-conditioned.'
+      },
+      {
+        title: 'Nilai yang Diprediksi',
+        body: 'Seluruh suku sinus-kosinus terintegrasi menjadi nol sepanjang satu tahun penuh, sehingga rata-rata tahunan menyusut ke bentuk tertutup ȳ(Y) = b₀ + b₁·(Y − 2013 + 0.5). Yang ditampilkan aplikasi adalah nilai yang mewakili satu tahun target, bukan nilai pada satu tanggal tertentu.'
+      },
+      {
+        title: 'Prediktor LST',
+        body: 'LST tahun target tidak diekstrapolasi langsung dari waktu. NDVI dan NDBI diproyeksikan lebih dulu secara harmonik, lalu dimasukkan ke hubungan spasial LST = a₀ + a₁·NDVI + a₂·NDBI + a₃·elevasi yang dicocokkan dari rata-rata tahunan historis. NDVI tetap menjadi penggerak utama model.'
       },
       {
         title: 'Keterbatasan Model',
-        body: 'Model mengasumsikan tren bersifat linear dan stasioner. Model tidak memperhitungkan: (1) variabilitas iklim jangka pendek (El Niño/La Niña), (2) perubahan tata guna lahan mendadak, (3) bias citra akibat musim hujan dengan tutupan awan tinggi yang tidak terfilter sempurna.'
+        body: 'Model mengasumsikan tren dan pola musiman yang tertangkap pada periode baseline terus berlaku. Model tidak memperhitungkan: (1) variabilitas iklim jangka pendek (El Niño/La Niña), (2) perubahan tata guna lahan mendadak, (3) bias citra akibat musim hujan dengan tutupan awan tinggi yang tidak terfilter sempurna.'
       },
       {
-        title: 'Interpretasi Proyeksi',
-        body: 'Proyeksi bersifat kondisional — berlaku hanya jika pola historis terus berlanjut. Semakin panjang rentang historis (≥10 tahun), semakin representatif koefisien regresi.'
+        title: 'Interpretasi Prediksi',
+        body: 'Prediksi bersifat kondisional — berlaku hanya jika pola historis terus berlanjut. Tahun target dihitung dari akhir periode baseline, sehingga jarak ekstrapolasinya selalu eksplisit. Semakin panjang rentang baseline (≥10 tahun), semakin stabil koefisien tren maupun koefisien harmoniknya.'
       }
     ]
   },
@@ -164,7 +172,7 @@ export default function Metodologi() {
         <title>Metodologi — Spatio-Temporal Analysis Engine LST &amp; NDVI Bali</title>
         <meta
           name="description"
-          content="Dokumentasi metodologi ilmiah: formula LST dan NDVI, sumber data Landsat 8/9, model prediksi linear, serta keterbatasan sistem analisis spasio-temporal Bali."
+          content="Dokumentasi metodologi ilmiah: formula LST dan NDVI, sumber data Landsat 8/9, model prediksi harmonik, serta keterbatasan sistem analisis spasio-temporal Bali."
         />
       </Head>
 

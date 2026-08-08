@@ -59,10 +59,20 @@ export default async function handler(req, res) {
       ? ['red', 'yellow', 'green']
       : ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
 
-    const { finalImage, baselineStats } = buildFinalImage(
-      dualCollection, params.mode, params.reducer,
-      params.gap_fill, mainBand, geometry, null
-    );
+    const startYear = new Date(params.start_date).getUTCFullYear();
+    const endYear   = new Date(params.end_date).getUTCFullYear();
+
+    const { finalImage, baselineImage } = buildFinalImage({
+      dualCollection,
+      mode: params.mode,
+      reducer: params.reducer,
+      gapFill: params.gap_fill,
+      mainBand,
+      geometry,
+      targetYear: null,
+      startYear,
+      endYear,
+    });
 
     if (!finalImage) {
       return res.status(404).json({ error: 'Tidak ada data citra untuk snapshot.' });
@@ -73,15 +83,11 @@ export default async function handler(req, res) {
 
     const responsePayload = await withTimeout(
       runGeeEvaluation({
-        finalImage, mainBand, geometry, visParams,
+        finalImage, baselineImage, mainBand, geometry, visParams,
         thresholdVal: params.threshold,
-        dualCollection,
-        startDateObj: new Date(params.start_date),
-        endDateObj: new Date(params.end_date),
-        baselineStats,
+        dualCollection, startYear, endYear,
         mode: params.mode,
         normalizedType: params.type,
-        normalizedRegion: params.region_name,
         targetYear: null,
       }),
       REQUEST_TIMEOUT_MS
@@ -103,10 +109,12 @@ export default async function handler(req, res) {
       _refresh_interval_days: 8,
       _params: params,
       map: responsePayload.map,
-      stats: responsePayload.stats,
-      chart: responsePayload.chart,
-      scatter: responsePayload.scatter,
-      downloadUrl: responsePayload.downloadUrl || null,
+      // Snapshot selalu "Seluruh Bali"; payload runGeeEvaluation memuat semua
+      // wilayah, jadi bagian ALL yang diambil.
+      stats: responsePayload.statsByRegion?.ALL || null,
+      chart: responsePayload.chartByRegion?.ALL || [],
+      scatter: responsePayload.scatterByRegion?.ALL || [],
+      downloadUrl: null,
     };
 
     const outputPath = path.join(process.cwd(), 'public', 'data', 'monitoring_snapshot.json');

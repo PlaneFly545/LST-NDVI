@@ -44,6 +44,26 @@ const LAYER_BOUNDS = {
   lst:  { min: 0,   max: 70, defMin: 20, defMax: 45 },
 };
 
+// Satu sumber nama layer untuk seluruh antarmuka. Sebelumnya LST muncul dalam
+// tiga bentuk berbeda (legenda "Suhu Permukaan", kartu "LST", tombol "LST"),
+// sehingga pembaca tidak yakin ketiganya merujuk hal yang sama.
+// NDVI sengaja tanpa satuan — indeks rasio memang tidak bersatuan.
+const LAYER_LABEL = {
+  ndvi: { short: 'NDVI', full: 'Indeks Vegetasi (NDVI)', unit: '',   axis: 'NDVI' },
+  lst:  { short: 'LST',  full: 'Suhu Permukaan (LST)',   unit: '°C', axis: 'Suhu Permukaan (°C)' },
+};
+
+/** Tempelkan satuan bila ada, tanpa meninggalkan spasi menggantung. */
+const withUnit = (value, unit) => (unit ? `${value} ${unit}` : `${value}`);
+
+// Titik grafik sekarang bertahun ({ year, value }). Snapshot yang dibuat sebelum
+// perubahan ini menyimpan tanggal ({ date: 'YYYY-MM-DD' }); dikonversi di sini
+// supaya berkas snapshot lama tetap tampil sampai diregenerasi.
+const normalizeChartPoints = (points) =>
+  (points || [])
+    .map((p) => (p?.year !== undefined ? p : { ...p, year: Number(String(p?.date || '').slice(0, 4)) }))
+    .filter((p) => Number.isFinite(p.year));
+
 /** Batasi angka ke rentang [lo, hi]; kembalikan fallback bila bukan angka. */
 const clampNum = (raw, lo, hi, fallback) => {
   const n = parseFloat(raw);
@@ -51,24 +71,34 @@ const clampNum = (raw, lo, hi, fallback) => {
   return Math.min(Math.max(n, lo), hi);
 };
 
-const MapLegend = ({ type, min, max }) => {
+const MapLegend = ({ type, min, max, isPrediction, targetYear }) => {
   const gradient = type === 'ndvi'
     ? 'linear-gradient(to right, #ef4444, #facc15, #22c55e)'
     : 'linear-gradient(to right, #1e1b4b, #38bdf8, #fef08a, #ef4444, #7f1d1d)';
+
+  const label = LAYER_LABEL[type] || LAYER_LABEL.lst;
 
   return (
     <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-[2000] bg-white/90 backdrop-blur-md p-2.5 md:p-3.5 rounded-xl shadow-lg border border-slate-200/50 w-[70vw] max-w-[200px] md:max-w-none md:w-64">
       <div className="flex items-center justify-between mb-1.5 md:mb-2.5">
         <span className="text-[10px] md:text-xs font-semibold text-slate-600 truncate mr-2">
-          {type === 'ndvi' ? 'NDVI' : 'Suhu Permukaan'}
+          {label.full}
         </span>
         <span className="px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] bg-slate-100 rounded text-slate-500 whitespace-nowrap">Landsat 8/9</span>
       </div>
+
+      {/* Tanpa penanda ini, peta prediksi terlihat identik dengan peta historis. */}
+      <div className="text-[9px] md:text-[10px] text-slate-400 mb-1.5 md:mb-2 truncate">
+        {isPrediction
+          ? `Prediksi ${targetYear} · rata-rata tahunan`
+          : 'Data historis · komposit periode terpilih'}
+      </div>
+
       <div className="w-full h-1.5 md:h-2 mb-1.5 md:mb-2 rounded-full" style={{ background: gradient }}></div>
       <div className="flex justify-between text-[10px] md:text-[11px] text-slate-500">
-        <span>{min}</span>
-        <span>{((min + max) / 2).toFixed(1)}</span>
-        <span>{max}</span>
+        <span>{withUnit(min, label.unit)}</span>
+        <span>{withUnit(((min + max) / 2).toFixed(1), label.unit)}</span>
+        <span>{withUnit(max, label.unit)}</span>
       </div>
     </div>
   );
@@ -115,7 +145,7 @@ export default function Home() {
 
   const [activeSplitSide, setActiveSplitSide] = useState('left'); // 'left' | 'right'
 
-  const [tiffUrl, setTiffUrl] = useState(null);
+  const [preparingTiff, setPreparingTiff] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
@@ -140,8 +170,19 @@ export default function Home() {
     });
   };
 
-  const currentYear = new Date().getFullYear();
-  const [targetYear, setTargetYear] = useState(currentYear + 5);
+  // Yang disimpan jaraknya (+1/+3/+5/+10), bukan tahunnya. Tahun target selalu
+  // diturunkan dari akhir periode baseline, jadi menggeser periode otomatis
+  // menggeser tahun target — bukan meninggalkan tahun basi dari tombol yang
+  // ditekan sebelumnya.
+  const [predictionOffset, setPredictionOffset] = useState(5);
+  const baselineStartYear = startDate.getFullYear();
+  const baselineEndYear = endDate.getFullYear();
+  const targetYear = baselineEndYear + predictionOffset;
+
+  // Label periode diisi tahunnya langsung. "Peta 1" tidak memberi tahu apa pun —
+  // pembaca harus balik ke panel tanggal untuk tahu peta itu periode berapa.
+  const periodeLabelKiri  = `Periode 1 · ${baselineStartYear}–${baselineEndYear}`;
+  const periodeLabelKanan = `Periode 2 · ${startDateRight.getFullYear()}–${endDateRight.getFullYear()}`;
 
   const [gapFill, setGapFill] = useState('none');
 
@@ -201,9 +242,8 @@ export default function Home() {
       // Set semua state — peta langsung muncul!
       setMapUrl(snapshot.map.urlFormat);
       setStats(snapshot.stats);
-      setChartData(snapshot.chart || []);
+      setChartData(normalizeChartPoints(snapshot.chart));
       setScatterData(snapshot.scatter || []);
-      if (snapshot.downloadUrl) setTiffUrl(snapshot.downloadUrl);
       if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
 
       // Sinkronisasi parameter filter dengan data snapshot yang dimuat
@@ -266,9 +306,8 @@ export default function Home() {
       // Gunakan overlay gambar statis lokal untuk demo agar tahan selamanya
       setMapUrl('/data/bali_lst_heatmap.png');
       setStats(demo.stats);
-      setChartData(demo.chart || []);
+      setChartData(normalizeChartPoints(demo.chart));
       setScatterData(demo.scatter || []);
-      if (demo.downloadUrl) setTiffUrl(demo.downloadUrl);
       toast.success('Selesai.', { id: toastId });
     } catch {
       toast.error('Gagal memuat data demo.', { id: toastId });
@@ -311,7 +350,6 @@ export default function Home() {
     setScatterData([]);
     setChartDataRight([]);
     setScatterDataRight([]);
-    setTiffUrl(null);
     setActiveSplitSide('left');
   };
 
@@ -355,15 +393,57 @@ export default function Home() {
     resetData();
   };
 
+  // Parameter permintaan mode tunggal. Dipakai bersama oleh proses analisis dan
+  // penyiapan berkas unduhan, supaya keduanya tidak pernah menghitung citra yang
+  // berbeda tanpa disadari.
+  const buildSingleModeParams = () => new URLSearchParams({
+    mode: analysisMode,
+    type: layerType,
+    region_name: region === 'Seluruh Bali' ? 'ALL' : region,
+    start_date: startDate.toISOString().split('T')[0],
+    end_date: endDate.toISOString().split('T')[0],
+    cloud_cover: debouncedCloudCover,
+    reducer: reducer,
+    vis_min: visMin,
+    vis_max: visMax,
+    threshold: threshold,
+    target_year: targetYear,
+    gap_fill: gapFill,
+  });
+
+  // URL unduhan dibuat saat tombol ditekan, bukan ikut di setiap permintaan peta.
+  // getDownloadURL terikat pada geometri wilayah, sementara hasil /api/map-layer
+  // sengaja dibuat lintas wilayah agar bisa dipakai ulang dari cache.
+  const handleDownloadGeoTIFF = async () => {
+    setPreparingTiff(true);
+    const toastId = toast.loading('Menyiapkan berkas GeoTIFF...');
+
+    try {
+      const res = await fetch(`/api/download-url?${buildSingleModeParams()}`);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.downloadUrl) {
+        toast.error(data.error || 'Gagal menyiapkan berkas unduhan.', { id: toastId });
+        return;
+      }
+
+      window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
+      toast.success('Berkas GeoTIFF siap diunduh.', { id: toastId });
+    } catch {
+      toast.error('Gagal menyiapkan berkas unduhan.', { id: toastId });
+    } finally {
+      setPreparingTiff(false);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     toast.dismiss();
-    setTiffUrl(null);
     setSnapshotLoaded(false);
 
     const loadingMsg = visualMode === 'split'
-      ? 'Memproses dua peta historis...'
-      : (analysisMode === 'history' ? 'Memproses data historis...' : 'Menghitung pemodelan linear...');
+      ? 'Memproses dua periode historis...'
+      : (analysisMode === 'history' ? 'Memproses data historis...' : 'Menghitung model prediksi...');
 
     const toastId = toast.loading(loadingMsg);
 
@@ -428,20 +508,7 @@ export default function Home() {
         setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
 
       } else {
-        const params = new URLSearchParams({
-          mode: analysisMode,
-          type: layerType,
-          region_name: regionParam,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
-          cloud_cover: debouncedCloudCover,
-          reducer: reducer,
-          vis_min: visMin,
-          vis_max: visMax,
-          threshold: threshold,
-          target_year: targetYear,
-          gap_fill: gapFill
-        });
+        const params = buildSingleModeParams();
 
         const res = await fetch(`/api/map-layer?${params}`);
 
@@ -467,9 +534,8 @@ export default function Home() {
 
         setMapUrl(data.map.urlFormat);
         setStats(data.stats);
-        setChartData(data.chart);
-        setScatterData(data.scatter);
-        if (data.downloadUrl) setTiffUrl(data.downloadUrl);
+        setChartData(data.chart || []);
+        setScatterData(data.scatter || []);
       }
 
       const durasi = formatDuration(serverMs);
@@ -509,16 +575,17 @@ export default function Home() {
 
     const regionLabel = activeStats?.region || region;
     const layerLabel = layerType.toUpperCase();
-    const unit = layerType === 'lst' ? '°C' : 'Index';
+    // NDVI tidak bersatuan — kolom satuan dikosongkan, bukan diisi "Index".
+    const unit = layerType === 'lst' ? '°C' : '';
 
-    const header = 'date,value,region,layer_type,unit';
+    const header = 'tahun,rata_rata_tahunan,wilayah,layer,satuan';
     const rows = activeChart
       .filter(d => d.value !== null && d.value !== undefined)
-      .map(d => `${d.date},${Number(d.value).toFixed(4)},${regionLabel},${layerLabel},${unit}`);
+      .map(d => `${d.year},${Number(d.value).toFixed(4)},${regionLabel},${layerLabel},${unit}`);
 
     const csvContent = [header, ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const fileName = `LST-NDVI_${layerLabel}_${regionLabel}_${activeChart[0]?.date || ''}_${activeChart[activeChart.length-1]?.date || ''}.csv`;
+    const fileName = `LST-NDVI_${layerLabel}_${regionLabel}_${activeChart[0]?.year || ''}_${activeChart[activeChart.length-1]?.year || ''}.csv`;
     saveAs(blob, fileName);
     toast.success(`Data CSV berhasil diekspor: ${fileName}`);
   };
@@ -554,7 +621,7 @@ export default function Home() {
   // Helper untuk menyiapkan data tampilan grafik (menangani overlay prediksi jika ada)
   const getDisplayChartData = (cData, currentStats) => {
     if (currentStats?.is_prediction && cData.length > 0) {
-      return [...cData, { date: `${currentStats.target_year}-01-01`, value: currentStats.mean, isPred: true }];
+      return [...cData, { year: currentStats.target_year, value: currentStats.mean, isPred: true }];
     }
     return cData;
   };
@@ -574,12 +641,14 @@ export default function Home() {
         ? (diff > 0 ? 'yang berpotensi mengindikasikan pemanasan lokal' : 'menunjukkan pendinginan wilayah')
         : (diff > 0 ? 'mengindikasikan penghijauan area' : 'mengindikasikan pengurangan tutupan lahan hijau');
 
-      let text = `Secara historis dari ${first.date.substring(0, 4)} hingga ${last.date.substring(0, 4)}, ${paramName} mengalami tren ${trendDir} kumulatif sebesar ${Math.abs(diff).toFixed(2)} ${currentStats?.unit}, ${sifatTrend}.`;
+      const unitSuffix = currentStats?.unit ? ` ${currentStats.unit}` : '';
+
+      let text = `Secara historis dari ${first.year} hingga ${last.year}, rata-rata tahunan ${paramName} mengalami tren ${trendDir} kumulatif sebesar ${Math.abs(diff).toFixed(2)}${unitSuffix}, ${sifatTrend}.`;
 
       if (currentStats?.is_prediction) {
         const predDiff = currentStats.mean - last.value;
         const predDir = predDiff > 0 ? 'naik' : 'turun';
-        text += ` Jika pola ini dipertahankan, proyeksi memprediksi nilai rata-rata akan terus bergerak ${predDir} mencapai ${currentStats.mean.toFixed(2)} ${currentStats?.unit} pada tahun ${currentStats.target_year}.`;
+        text += ` Jika pola ini dipertahankan, model memprediksi rata-rata tahunan bergerak ${predDir} ke ${currentStats.mean.toFixed(2)}${unitSuffix} pada tahun ${currentStats.target_year}.`;
       }
       return text;
     }
@@ -614,25 +683,36 @@ export default function Home() {
 
     const cardClass = "flex flex-col p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200";
 
+    const label = LAYER_LABEL[layerType] || LAYER_LABEL.lst;
+    const unitTag = label.unit
+      ? <span className="text-xs font-normal text-slate-400">{label.unit}</span>
+      : null;
+
     if (stats.is_prediction) {
       const delta = stats.mean - stats.baseline_mean;
       const isWorse = layerType === 'lst' ? delta > 0 : delta < 0;
+      const baselineRange = stats.baseline_start_year && stats.baseline_end_year
+        ? `${stats.baseline_start_year}–${stats.baseline_end_year}`
+        : 'baseline';
+
       return (
         <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
           <div className={cardClass}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Proyeksi {stats.target_year}</span>
+            {/* Menyebut "rata-rata tahunan" secara eksplisit: angka ini mewakili
+                satu tahun penuh, bukan nilai pada satu tanggal. */}
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Rata-rata tahunan {stats.target_year} (prediksi)</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
-              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
+              {stats.mean.toFixed(2)} {unitTag}
             </span>
           </div>
           <div className={cardClass}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Delta (Selisih)</span>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Selisih vs rata-rata baseline {baselineRange}</span>
             <span className={`text-xl font-bold leading-none ${isWorse ? 'text-rose-500' : 'text-emerald-500'}`}>
-              {delta > 0 ? '+' : ''}{delta.toFixed(2)} <span className="text-xs font-normal opacity-60">{stats.unit}</span>
+              {delta > 0 ? '+' : ''}{delta.toFixed(2)} {label.unit && <span className="text-xs font-normal opacity-60">{label.unit}</span>}
             </span>
           </div>
           <div className={`col-span-2 ${cardClass}`}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah terdampak (di atas {stats.threshold})</span>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah prediksi di atas {withUnit(stats.threshold, label.unit)}</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
               {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-400">Hektar</span>
             </span>
@@ -643,19 +723,19 @@ export default function Home() {
       return (
         <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
           <div className={cardClass}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Rata-rata {layerType === 'lst' ? 'LST' : 'NDVI'}</span>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Rata-rata {label.short}</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
-              {stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
+              {stats.mean.toFixed(2)} {unitTag}
             </span>
           </div>
           <div className={cardClass}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Maksimum</span>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Maksimum {label.short}</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
-              {stats.max.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span>
+              {stats.max.toFixed(2)} {unitTag}
             </span>
           </div>
           <div className={`col-span-2 ${cardClass}`}>
-            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah terdampak (di atas {stats.threshold})</span>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center gap-1.5"><AlertTriangle size={12} /> Wilayah historis di atas {withUnit(stats.threshold, label.unit)}</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
               {stats.impact_area_ha ? stats.impact_area_ha.toLocaleString('id-ID', { maximumFractionDigits: 1 }) : 0} <span className="text-xs font-normal text-slate-400">Hektar</span>
             </span>
@@ -703,14 +783,17 @@ export default function Home() {
     const trendData = getTrendLineData(activeSData);
     const displayChartData = getDisplayChartData(activeCData, activeStats);
 
+    const chartAxisLabel = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).axis;
+    const chartUnit = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).unit;
+
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
         <div className="flex items-center justify-center mb-4 relative min-h-7">
           <span className="text-[13px] font-semibold text-slate-600">Grafik Analitik</span>
           {isSplit && (
             <div className="absolute right-0 flex bg-slate-100 p-0.5 rounded-md">
-              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta 1</button>
-              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Peta 2</button>
+              <button type="button" onClick={() => setActiveSplitSide('left')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'left' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Periode 1</button>
+              <button type="button" onClick={() => setActiveSplitSide('right')} className={`text-[11px] px-2.5 py-1 font-medium rounded transition-all cursor-pointer ${activeSplitSide === 'right' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>Periode 2</button>
             </div>
           )}
         </div>
@@ -727,13 +810,27 @@ export default function Home() {
         <div className="h-56 w-full relative">
           <ResponsiveContainer>
             {chartMode === 'trend' ? (
-              <LineChart data={displayChartData} margin={{ top: 10, right: 10, bottom: 5, left: -20 }}>
+              <LineChart data={displayChartData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
-                <XAxis dataKey="date" hide />
-                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                {/* Sumbu X memakai tahun, bukan tanggal: tiap titik adalah
+                    rata-rata sepanjang tahun, bukan pengukuran 1 Januari. */}
+                <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                <YAxis
+                  domain={['auto', 'auto']}
+                  width={64}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tickLine={false}
+                  axisLine={false}
+                  label={{ value: chartAxisLabel, angle: -90, position: 'insideLeft', fontSize: 11, fill: '#64748b' }}
+                />
                 <Tooltip
                   contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                  labelFormatter={(label) => activeStats?.is_prediction && label.startsWith(activeStats.target_year) ? `Tahun ${activeStats.target_year} (Proyeksi)` : label}
+                  labelFormatter={(value) =>
+                    activeStats?.is_prediction && Number(value) === Number(activeStats.target_year)
+                      ? `${activeStats.target_year} · prediksi`
+                      : `${value} · rata-rata tahunan`
+                  }
+                  formatter={(value) => [withUnit(Number(value).toFixed(2), chartUnit), 'Rata-rata tahunan']}
                 />
                 <Line type="monotone" dataKey="value" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
                 {activeStats?.is_prediction && (
@@ -882,7 +979,7 @@ export default function Home() {
                       <Square size={16} /> Tunggal
                     </button>
                     <button onClick={() => handleVisualModeChange('split')} className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer ${visualMode === 'split' ? 'bg-slate-800 shadow-sm text-white' : 'text-slate-500 hover:text-slate-700'}`}>
-                      <Columns size={16} /> Komparasi (Split)
+                      <Columns size={16} /> Perbandingan Periode
                     </button>
                   </div>
                 </div>
@@ -896,23 +993,25 @@ export default function Home() {
 
                 {analysisMode === 'prediksi' && (
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Target Masa Depan</span>
+                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Target prediksi — dihitung dari akhir baseline ({baselineEndYear})
+                    </span>
                     <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-lg">
-                      {predictionOffsets.map((offset) => {
-                        const yr = currentYear + offset;
-                        return (
-                          <button key={offset} onClick={() => setTargetYear(yr)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${targetYear === yr ? 'bg-white shadow-sm border border-slate-200 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                            +{offset} Thn
-                          </button>
-                        );
-                      })}
+                      {predictionOffsets.map((offset) => (
+                        <button key={offset} onClick={() => setPredictionOffset(offset)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${predictionOffset === offset ? 'bg-white shadow-sm border border-slate-200 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+                          +{offset} Thn
+                        </button>
+                      ))}
                     </div>
+                    <span className="text-[11px] text-slate-400 mt-1.5 block">
+                      Tahun target: {targetYear}
+                    </span>
                   </div>
                 )}
 
                 <div className="mb-4">
                   <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                    {visualMode === 'split' ? 'Periode Historis Peta 1' : (analysisMode === 'prediksi' ? 'Data Historis (Baseline)' : 'Rentang Tanggal')}
+                    {visualMode === 'split' ? 'Periode 1' : (analysisMode === 'prediksi' ? 'Periode baseline (dasar perhitungan model)' : 'Rentang Tanggal')}
                   </span>
                   <div className="flex items-center gap-2">
                     <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
@@ -923,7 +1022,7 @@ export default function Home() {
 
                 {visualMode === 'split' && (
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode Historis Peta 2</span>
+                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode 2</span>
                     <div className="flex items-center gap-2">
                       <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                       <span className="text-slate-300 text-sm">—</span>
@@ -1037,7 +1136,7 @@ export default function Home() {
                 className="w-full py-3 mt-2 text-sm font-semibold text-white transition-all rounded-xl bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 flex justify-center items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 {loading ? <span className="animate-spin">⟳</span> : <Activity size={16} />}
-                {visualMode === 'split' ? 'Proses Komparasi' : (analysisMode === 'prediksi' ? 'Jalankan Simulasi' : 'Proses Data')}
+                {visualMode === 'split' ? 'Proses Perbandingan' : (analysisMode === 'prediksi' ? 'Jalankan Prediksi' : 'Proses Data')}
               </button>
             </div>
 
@@ -1072,11 +1171,11 @@ export default function Home() {
               <div id="tour-result-area" className="mt-8 pt-6 border-t border-slate-100 animate-fade-in">
                 {visualMode === 'split' ? (
                   <>
-                    <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Komparasi Statistik</span>
+                    <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Statistik Perbandingan</span>
                     <div className="grid grid-cols-2 gap-3">
                       {/* Blok Statistik Kiri */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Data Peta 1</div>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">{periodeLabelKiri}</div>
                         <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
                           <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
                           <span className="text-lg font-bold text-slate-800">{stats.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{stats.unit}</span></span>
@@ -1089,7 +1188,7 @@ export default function Home() {
 
                       {/* Blok Statistik Kanan */}
                       <div className="flex flex-col gap-2">
-                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">Data Peta 2</div>
+                        <div className="text-[11px] font-medium text-slate-400 bg-slate-50 p-1.5 rounded-lg text-center">{periodeLabelKanan}</div>
                         <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col">
                           <span className="text-[11px] text-slate-400 mb-0.5">Rata-rata</span>
                           <span className="text-lg font-bold text-slate-800">{statsRight.mean.toFixed(2)} <span className="text-xs font-normal text-slate-400">{statsRight.unit}</span></span>
@@ -1104,7 +1203,7 @@ export default function Home() {
                     {/* Blok Kesimpulan / Selisih */}
                     <div className="mt-3 p-4 bg-slate-800 text-white rounded-xl shadow-md relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                      <span className="text-[11px] text-slate-300 mb-2 block">Perubahan (Peta 2 − Peta 1)</span>
+                      <span className="text-[11px] text-slate-300 mb-2 block">Perubahan (Periode 2 − Periode 1)</span>
                       <div className="flex justify-between items-end">
                         <div>
                           <span className="text-xs text-slate-400 block mb-0.5">Selisih Rata-rata</span>
@@ -1147,10 +1246,15 @@ export default function Home() {
                       <FileDown size={14} /> CSV
                     </button>
                   )}
-                  {tiffUrl && visualMode !== 'split' && (
-                    <a href={tiffUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-slate-200 transition-colors no-underline cursor-pointer">
-                      <Download size={14} /> GeoTIFF
-                    </a>
+                  {stats && visualMode !== 'split' && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadGeoTIFF}
+                      disabled={preparingTiff}
+                      className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Download size={14} /> {preparingTiff ? 'Menyiapkan...' : 'GeoTIFF'}
+                    </button>
                   )}
                 </div>
               </div>
@@ -1169,7 +1273,15 @@ export default function Home() {
         {/* === MAP AREA === */}
         <div id="tour-map-area" className="relative flex-1 bg-slate-100 flex">
           <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
-          {stats && <MapLegend type={layerType} min={parseFloat(visMin)} max={parseFloat(visMax)} />}
+          {stats && (
+            <MapLegend
+              type={layerType}
+              min={parseFloat(visMin)}
+              max={parseFloat(visMax)}
+              isPrediction={!!stats.is_prediction}
+              targetYear={stats.target_year}
+            />
+          )}
         </div>
 
         {/* --- Tombol Lonceng Melayang (FAB) --- */}

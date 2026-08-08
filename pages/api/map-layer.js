@@ -7,6 +7,28 @@ import { resolveGeometry, buildDualCollection, buildFinalImage, runGeeEvaluation
 
 const REQUEST_TIMEOUT_MS = 120_000; // 2 menit
 
+/**
+ * Ambil bagian satu wilayah dari payload yang memuat semua wilayah.
+ *
+ * Payload di cache selalu berisi seluruh kabupaten/kota; yang dikirim ke klien
+ * hanya potongan wilayah yang diminta. Karena itu berpindah wilayah tidak
+ * memerlukan komputasi GEE baru — cukup memilih ulang dari entri cache yang sama.
+ *
+ * @param {object} payload
+ * @param {string} region  'ALL' atau nama kabupaten (huruf besar)
+ * @returns {object}
+ */
+function selectRegion(payload, region) {
+  const key = region === 'ALL' ? 'ALL' : region.toUpperCase();
+
+  return {
+    map: payload.map,
+    stats: payload.statsByRegion?.[key] || payload.statsByRegion?.ALL || null,
+    chart: payload.chartByRegion?.[key] || [],
+    scatter: payload.scatterByRegion?.[key] || [],
+  };
+}
+
 export default async function handler(req, res) {
   // ── Method guard ─────────────────────────────────────────────────────────
   if (req.method !== 'GET') {
@@ -34,9 +56,13 @@ export default async function handler(req, res) {
     } = params;
 
     // ── 2. Cache check ───────────────────────────────────────────────────────
+    // region sengaja TIDAK ikut dalam kunci: satu komputasi menghasilkan
+    // statistik seluruh kabupaten sekaligus, jadi pindah wilayah selalu HIT.
+    // vis_min/vis_max/threshold tetap ikut karena benar-benar mengubah keluaran
+    // (palet ubinan peta dan ambang luas area terdampak).
     const cacheKey = buildCacheKey({
       type: normalizedType, mode: normalizedMode, reducer: normalizedReducer,
-      gap_fill: normalizedGapFill, region: normalizedRegion,
+      gap_fill: normalizedGapFill,
       start_date: startDateInput, end_date: endDateInput,
       cloud_cover: cloudThreshold, target_year: clampedTargetYear,
       vis_min: visMin, vis_max: visMax, threshold: thresholdVal,
@@ -45,7 +71,10 @@ export default async function handler(req, res) {
     const cached = getCached(cacheKey);
     if (cached) {
       res.setHeader('X-Cache', 'HIT');
-      return res.status(200).json({ ...cached, processing_time_ms: elapsedMs() });
+      return res.status(200).json({
+        ...selectRegion(cached, normalizedRegion),
+        processing_time_ms: elapsedMs(),
+      });
     }
     res.setHeader('X-Cache', 'MISS');
 
@@ -53,7 +82,8 @@ export default async function handler(req, res) {
     await authenticate();
 
     // ── 4. Build GEE objects ─────────────────────────────────────────────────
-    const geometry = resolveGeometry(normalizedRegion);
+    // Citra selalu dibangun untuk seluruh Bali, tidak dipotong per kabupaten.
+    const geometry = resolveGeometry('ALL');
 
     const dualCollection = buildDualCollection(
       geometry, startDateInput, endDateInput, cloudThreshold
@@ -64,10 +94,20 @@ export default async function handler(req, res) {
       ? ['red', 'yellow', 'green']
       : ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
 
-    const { finalImage, baselineStats } = buildFinalImage(
-      dualCollection, normalizedMode, normalizedReducer,
-      normalizedGapFill, mainBand, geometry, clampedTargetYear
-    );
+    const startYear = startDateObj.getUTCFullYear();
+    const endYear   = endDateObj.getUTCFullYear();
+
+    const { finalImage, baselineImage } = buildFinalImage({
+      dualCollection,
+      mode: normalizedMode,
+      reducer: normalizedReducer,
+      gapFill: normalizedGapFill,
+      mainBand,
+      geometry,
+      targetYear: clampedTargetYear,
+      startYear,
+      endYear,
+    });
 
     if (!finalImage) {
       return res.status(404).json({ error: 'Tidak ada data citra pada rentang waktu/wilayah tersebut.' });
@@ -76,28 +116,32 @@ export default async function handler(req, res) {
     // ── 5. Parallel GEE evaluation ───────────────────────────────────────────
     const visParams = { min: visMin, max: visMax, palette };
 
-    const responsePayload = await withTimeout(
+    const fullPayload = await withTimeout(
       runGeeEvaluation({
-        finalImage, mainBand, geometry, visParams, thresholdVal,
-        dualCollection, startDateObj, endDateObj, baselineStats,
-        mode: normalizedMode, normalizedType, normalizedRegion,
+        finalImage, baselineImage, mainBand, geometry, visParams, thresholdVal,
+        dualCollection, startYear, endYear,
+        mode: normalizedMode, normalizedType,
         targetYear: clampedTargetYear,
       }),
       REQUEST_TIMEOUT_MS
     );
 
     // runGeeEvaluation returns null when getMap fails (no valid pixels)
-    if (!responsePayload) {
+    if (!fullPayload) {
       return res.status(422).json({
         error: 'Tidak ada piksel valid pada rentang waktu/wilayah tersebut. Coba perluas rentang tanggal atau naikkan batas tutupan awan.',
       });
     }
 
     // ── 6. Cache & respond ───────────────────────────────────────────────────
-    // Payload yang di-cache sengaja tidak memuat processing_time_ms, supaya
-    // cache HIT melaporkan durasi lookup-nya sendiri, bukan durasi komputasi lama.
-    setCache(cacheKey, responsePayload);
-    return res.status(200).json({ ...responsePayload, processing_time_ms: elapsedMs() });
+    // Yang disimpan adalah payload lengkap semua wilayah; yang dikirim hanya
+    // potongan wilayah yang diminta. processing_time_ms sengaja tidak ikut
+    // di-cache supaya cache HIT melaporkan durasi lookup-nya sendiri.
+    setCache(cacheKey, fullPayload);
+    return res.status(200).json({
+      ...selectRegion(fullPayload, normalizedRegion),
+      processing_time_ms: elapsedMs(),
+    });
 
   } catch (error) {
     safeErrorLog('GEE Error (sanitized response):', {
