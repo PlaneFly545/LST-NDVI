@@ -75,6 +75,17 @@ function ClipToRegion({ geoJson }) {
       return;
     }
 
+    // Selama zoom beranimasi, Leaflet tidak menggeser pane-nya — yang
+    // ditransformasi adalah wadah ubin di dalamnya. Area pangkas ini menempel
+    // di pane, jadi sepanjang animasi ubinnya sudah bergeser sementara area
+    // pangkasnya masih diam, lalu melompat balik saat animasi selesai. Karena
+    // itu selama ada wilayah yang dipangkas, zoom dibuat langsung tanpa
+    // animasi: ubin dan area pangkas dihitung ulang di siklus yang sama,
+    // sehingga tidak pernah ada jeda di mana keduanya tidak sejajar.
+    // Nilainya dibaca Leaflet saat zoom terjadi, bukan saat peta dibuat.
+    const ambangZoomAsli = map.options.zoomAnimationThreshold;
+    map.options.zoomAnimationThreshold = 0;
+
     const clipId = `region-clip-${L.Util.stamp(container)}`;
 
     const svg = document.createElementNS(SVG_NS, 'svg');
@@ -126,6 +137,7 @@ function ClipToRegion({ geoJson }) {
 
     return () => {
       map.off('zoomend viewreset moveend resize', redraw);
+      map.options.zoomAnimationThreshold = ambangZoomAsli;
       container.style.clipPath = '';
       svg.remove();
     };
