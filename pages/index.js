@@ -90,8 +90,8 @@ const MapLegend = ({ type, min, max, isPrediction, targetYear }) => {
       {/* Tanpa penanda ini, peta prediksi terlihat identik dengan peta historis. */}
       <div className="text-[9px] md:text-[10px] text-slate-400 mb-1.5 md:mb-2 truncate">
         {isPrediction
-          ? `Prediksi ${targetYear} · rata-rata tahunan`
-          : 'Data historis · komposit periode terpilih'}
+          ? `Prediksi ${targetYear} (rata-rata tahunan)`
+          : 'Data historis (komposit periode terpilih)'}
       </div>
 
       <div className="w-full h-1.5 md:h-2 mb-1.5 md:mb-2 rounded-full" style={{ background: gradient }}></div>
@@ -617,7 +617,7 @@ export default function Home() {
   // Kalkulasi Tren Regresi Linear yang dinamis menerima data apa saja (kiri atau kanan)
   const getTrendLineData = (dataArray) => {
     if (!dataArray || dataArray.length < 2) return null;
-    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
     const n = dataArray.length;
 
     dataArray.forEach(p => {
@@ -625,6 +625,7 @@ export default function Home() {
       sumY += p.lst;
       sumXY += p.ndvi * p.lst;
       sumXX += p.ndvi * p.ndvi;
+      sumYY += p.lst * p.lst;
     });
 
     const denominator = (n * sumXX - sumX * sumX);
@@ -633,21 +634,40 @@ export default function Home() {
     const m = (n * sumXY - sumX * sumY) / denominator;
     const c = (sumY - m * sumX) / n;
 
+    // Kuat-lemahnya hubungan dibaca dari koefisien korelasi Pearson, bukan dari
+    // kemiringan garis: kemiringan bersatuan (°C per satuan NDVI) sehingga
+    // besarnya tidak bisa dipakai menilai keeratan hubungan.
+    const spreadY = Math.sqrt(n * sumYY - sumY * sumY);
+    const spreadX = Math.sqrt(denominator);
+    const r = spreadX > 0 && spreadY > 0
+      ? (n * sumXY - sumX * sumY) / (spreadX * spreadY)
+      : null;
+
     return {
       segment: [
         { x: -1, y: m * (-1) + c },
         { x: 1, y: m * 1 + c }
       ],
-      slope: m
+      slope: m,
+      r,
+      n,
     };
   };
 
   // Helper untuk menyiapkan data tampilan grafik (menangani overlay prediksi jika ada)
+  // Titik prediksi memakai kunci `pred` tersendiri, bukan `value` yang sama
+  // dengan deret historis. Kalau keduanya berbagi kunci, garis putus-putus merah
+  // menimpa seluruh deret historis dan tooltip menyebut angka yang sama dua kali.
+  // Titik historis terakhir ikut diberi `pred` supaya garisnya tersambung.
   const getDisplayChartData = (cData, currentStats) => {
-    if (currentStats?.is_prediction && cData.length > 0) {
-      return [...cData, { year: currentStats.target_year, value: currentStats.mean, isPred: true }];
-    }
-    return cData;
+    if (!currentStats?.is_prediction || cData.length === 0) return cData;
+
+    const last = cData[cData.length - 1];
+    return [
+      ...cData.slice(0, -1),
+      { ...last, pred: last.value },
+      { year: currentStats.target_year, value: null, pred: currentStats.mean, isPred: true },
+    ];
   };
 
   // Generator Teks Interpretasi
@@ -659,35 +679,40 @@ export default function Home() {
       const first = histData[0];
       const last = histData[histData.length - 1];
       const diff = last.value - first.value;
-      const paramName = layerType === 'lst' ? 'Suhu Permukaan' : 'Indeks Vegetasi';
-      const trendDir = diff > 0 ? 'peningkatan' : 'penurunan';
+      const paramName = layerType === 'lst' ? 'suhu permukaan' : 'indeks vegetasi';
+      const trendDir = diff > 0 ? 'naik' : 'turun';
       const sifatTrend = layerType === 'lst'
-        ? (diff > 0 ? 'yang berpotensi mengindikasikan pemanasan lokal' : 'menunjukkan pendinginan wilayah')
-        : (diff > 0 ? 'mengindikasikan penghijauan area' : 'mengindikasikan pengurangan tutupan lahan hijau');
+        ? (diff > 0 ? 'yang mengindikasikan pemanasan lokal' : 'yang menunjukkan pendinginan wilayah')
+        : (diff > 0 ? 'yang menunjukkan tutupan hijau bertambah' : 'yang menunjukkan tutupan hijau berkurang');
 
       const unitSuffix = currentStats?.unit ? ` ${currentStats.unit}` : '';
 
-      let text = `Secara historis dari ${first.year} hingga ${last.year}, rata-rata tahunan ${paramName} mengalami tren ${trendDir} kumulatif sebesar ${Math.abs(diff).toFixed(2)}${unitSuffix}, ${sifatTrend}.`;
+      let text = `Dari ${first.year} ke ${last.year}, rata-rata tahunan ${paramName} ${trendDir} ${Math.abs(diff).toFixed(2)}${unitSuffix}, ${sifatTrend}.`;
 
       if (currentStats?.is_prediction) {
         const predDiff = currentStats.mean - last.value;
         const predDir = predDiff > 0 ? 'naik' : 'turun';
-        text += ` Jika pola ini dipertahankan, model memprediksi rata-rata tahunan bergerak ${predDir} ke ${currentStats.mean.toFixed(2)}${unitSuffix} pada tahun ${currentStats.target_year}.`;
+        text += ` Jika pola ini berlanjut, model memprediksi rata-rata tahunan ${predDir} ke ${currentStats.mean.toFixed(2)}${unitSuffix} pada ${currentStats.target_year}.`;
       }
       return text;
     }
 
-    if (cMode === 'scatter' && sData.length > 1 && tData) {
-      const { slope } = tData;
-      if (slope < -1) {
-        return "Terdapat Korelasi Negatif Kuat. Secara empiris terbukti bahwa titik dengan tutupan vegetasi lebat (NDVI mendekati 1) secara konsisten meredam panas, menghasilkan Suhu Permukaan (LST) yang jauh lebih dingin.";
-      } else if (slope < 0) {
-        return "Terdapat indikasi Korelasi Negatif. Area menunjukkan pola umum dimana semakin tinggi kerapatan hijau, semakin rendah Suhu Permukaan di sekitarnya.";
-      } else if (slope > 0) {
-        return "Terdeteksi Korelasi Positif. Secara teoritis ini adalah anomali (vegetasi tinggi seharusnya menurunkan suhu). Kondisi ini biasa terjadi jika ada intervensi awan ekstrem, atau kesalahan pembacaan sensor pada wilayah air.";
+    if (cMode === 'scatter' && sData.length > 1 && Number.isFinite(tData?.r)) {
+      // Keeratan hubungan disebut lewat koefisien korelasi beserta jumlah
+      // sampelnya, supaya angkanya bisa diperiksa ulang.
+      const r = tData.r;
+      const kuat = Math.abs(r) >= 0.7 ? 'kuat' : Math.abs(r) >= 0.4 ? 'sedang' : 'lemah';
+      const ukuran = `r = ${r.toFixed(2).replace('.', ',')}, n = ${tData.n.toLocaleString('id-ID')}`;
+
+      if (r < 0) {
+        return `Korelasi negatif ${kuat} (${ukuran}). Makin rapat vegetasi, makin rendah suhu permukaan.`;
       }
+      if (r > 0) {
+        return `Korelasi positif ${kuat} (${ukuran}). Arah ini berlawanan dengan dugaan umum; periksa kemungkinan sisa awan atau piksel perairan pada sampel.`;
+      }
+      return `Tidak ada hubungan yang terbaca (${ukuran}).`;
     }
-    return "Sedang mengumpulkan sampel data untuk diinterpretasikan...";
+    return "Belum ada data untuk ditafsirkan.";
   };
 
   // Skeleton Loading untuk KPI Cards
@@ -772,6 +797,9 @@ export default function Home() {
   // Hasil baru dianggap siap tampil kalau semua sisi yang dibutuhkan mode aktif
   // sudah terisi — mode perbandingan butuh dua periode, bukan satu.
   const hasResult = visualMode === 'split' ? !!(stats && statsRight) : !!stats;
+
+  // Nama dan satuan layer aktif, dipakai label-label di panel kontrol.
+  const activeLabel = LAYER_LABEL[layerType] || LAYER_LABEL.lst;
 
   // Vis range gradient preview
   const visGradient = layerType === 'ndvi'
@@ -873,16 +901,12 @@ export default function Home() {
                 />
                 <Tooltip
                   contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                  labelFormatter={(value) =>
-                    activeStats?.is_prediction && Number(value) === Number(activeStats.target_year)
-                      ? `${activeStats.target_year} · prediksi`
-                      : `${value} · rata-rata tahunan`
-                  }
-                  formatter={(value) => [withUnit(Number(value).toFixed(2), chartUnit), 'Rata-rata tahunan']}
+                  labelFormatter={(value) => `Tahun ${value}`}
+                  formatter={(value, name) => [withUnit(Number(value).toFixed(2), chartUnit), name]}
                 />
-                <Line type="monotone" dataKey="value" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="value" name="Rata-rata tahunan" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
                 {activeStats?.is_prediction && (
-                  <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="pred" name="Prediksi (rata-rata tahunan)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls={false} />
                 )}
               </LineChart>
             ) : (
@@ -1065,29 +1089,31 @@ export default function Home() {
             <div className="space-y-5">
               {/* Konfigurasi Dasar */}
               <div id="tour-scenario">
-                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Skenario Pemodelan</span>
+                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Pengaturan Analisis</span>
 
                 {analysisMode === 'prediksi' && (
                   <div className="mb-4">
                     <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                      Target prediksi — dihitung dari akhir baseline ({baselineEndYear})
+                      Target prediksi: {targetYear}
                     </span>
                     <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-lg">
                       {predictionOffsets.map((offset) => (
                         <button key={offset} onClick={() => setPredictionOffset(offset)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${predictionOffset === offset ? 'bg-white shadow-sm border border-slate-200 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                          +{offset} Thn
+                          +{offset} tahun
                         </button>
                       ))}
                     </div>
+                    {/* Penguji mempersoalkan target yang terbaca sebagai tahun
+                        kalender; keterangan ini menegaskan titik hitungnya. */}
                     <span className="text-[11px] text-slate-400 mt-1.5 block">
-                      Tahun target: {targetYear}
+                      Dihitung dari akhir baseline {baselineEndYear}
                     </span>
                   </div>
                 )}
 
                 <div className="mb-4">
                   <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                    {visualMode === 'split' ? 'Periode 1' : (analysisMode === 'prediksi' ? 'Periode baseline (dasar perhitungan model)' : 'Rentang Tanggal')}
+                    {visualMode === 'split' ? 'Periode 1' : (analysisMode === 'prediksi' ? 'Periode baseline' : 'Rentang Tanggal')}
                   </span>
                   <div className="flex items-center gap-2">
                     <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
@@ -1118,9 +1144,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Parameter Lingkungan */}
+              {/* Tampilan Data */}
               <div id="tour-parameter" className="pt-4 border-t border-slate-100">
-                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Parameter Lingkungan</span>
+                <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block">Tampilan Data</span>
 
                 <div className="flex gap-2 mb-4">
                   {['lst', 'ndvi'].map((type) => (
@@ -1162,17 +1188,20 @@ export default function Home() {
                     />
                   </div>
                   <p className="mt-2 text-[10px] text-slate-400 text-center">
-                    Rentang {layerType === 'ndvi' ? 'NDVI' : 'suhu'} yang diizinkan: {visBounds.min} s/d {visBounds.max}
+                    {layerType === 'ndvi' ? 'NDVI' : 'Suhu'} berkisar {visBounds.min} sampai {withUnit(visBounds.max, activeLabel.unit)}
                   </p>
                 </div>
 
                 <div className="px-4 py-3 mt-3 bg-slate-50 border border-slate-100 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-slate-500 flex items-center gap-1.5"><AlertTriangle size={12} /> Ambang batas dampak</span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1.5"><AlertTriangle size={12} /> Ambang batas {layerType === 'lst' ? 'suhu' : 'NDVI'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="number" step="0.1" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-400 bg-white text-slate-600" />
-                    <span className="text-xs text-slate-400 whitespace-nowrap">{layerType === 'lst' ? '°C' : 'Index'}</span>
+                    {/* NDVI tidak bersatuan, jadi tidak ada yang ditulis di sini. */}
+                    {activeLabel.unit && (
+                      <span className="text-xs text-slate-400 whitespace-nowrap">{activeLabel.unit}</span>
+                    )}
                   </div>
                 </div>
               </div>
