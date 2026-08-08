@@ -1,60 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, useMapEvents, ImageOverlay, GeoJSON, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, useMapEvents, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet untuk akses geoJSON utils
 
-// Cincin sebesar dunia, dipakai sebagai bidang luar poligon peredup.
-const WORLD_RING = [[-89.9, -179.9], [-89.9, 179.9], [89.9, 179.9], [89.9, -179.9]];
-
-/** Kumpulkan semua cincin poligon dari sebuah geometry GeoJSON. */
-function extractRings(geometry) {
-  if (!geometry) return [];
-  if (geometry.type === 'Polygon') return geometry.coordinates;
-  if (geometry.type === 'MultiPolygon') return geometry.coordinates.flat();
-  return [];
-}
-
-/**
- * Penanda wilayah terpilih.
- *
- * Raster GEE dihitung untuk seluruh Bali dan tidak lagi dipotong per kabupaten —
- * itulah yang membuat perpindahan wilayah bisa langsung dilayani dari cache.
- * Sebagai gantinya wilayah terpilih ditandai di sisi peta: batasnya digaris
- * tegas, dan area di luarnya diredupkan.
- */
-function RegionOverlay({ geoJson }) {
-  if (!geoJson) return null;
-
-  const isSingleRegion = geoJson.type === 'Feature';
-
-  const holes = isSingleRegion
-    ? extractRings(geoJson.geometry).map((ring) => ring.map(([lng, lat]) => [lat, lng]))
-    : [];
-
-  return (
-    <>
-      {holes.length > 0 && (
-        <Polygon
-          positions={[WORLD_RING, ...holes]}
-          pathOptions={{ stroke: false, fillColor: '#0f172a', fillOpacity: 0.45 }}
-          interactive={false}
-        />
-      )}
-      <GeoJSON
-        // Tanpa key baru, react-leaflet mempertahankan layer lama saat wilayah berganti.
-        key={isSingleRegion ? geoJson.properties?.nm_kabkota || 'region' : 'bali'}
-        data={geoJson}
-        style={{
-          color: '#0f172a',
-          weight: isSingleRegion ? 2.5 : 1,
-          opacity: isSingleRegion ? 1 : 0.5,
-          fill: false,
-        }}
-        interactive={false}
-      />
-    </>
-  );
-}
+// Catatan: wilayah terpilih ditandai lewat auto-zoom (MapFocus) dan nama wilayah
+// di panel statistik — bukan lewat garis batas atau peredup di atas peta.
+// Keduanya pernah dicoba dan justru menutupi visualisasi LST/NDVI-nya.
 
 // Helper: Update layer gambar dari GEE (TileLayer) atau ImageOverlay lokal untuk demo
 function MapLayer({ url }) {
@@ -200,7 +151,6 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
             />
             {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
             {mapUrl && <MapLayer url={mapUrl} />}
-            <RegionOverlay geoJson={selectedGeoJson} />
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider">
@@ -217,7 +167,6 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
             />
             {selectedGeoJson && <MapFocus geoJson={selectedGeoJson} />}
             {mapUrlRight && <MapLayer url={mapUrlRight} />}
-            <RegionOverlay geoJson={selectedGeoJson} />
             <SyncCenter viewState={viewState} setViewState={setViewState} />
           </MapContainer>
           <div className={`absolute z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-slate-200 uppercase tracking-wider ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}>
@@ -273,9 +222,6 @@ const Map = ({ mapUrl, mapUrlRight, isSplit, selectedGeoJson }) => {
 
       {/* Layer GEE */}
       {mapUrl && <MapLayer url={mapUrl} />}
-
-      {/* Penanda wilayah terpilih (batas + peredup di luar wilayah) */}
-      <RegionOverlay geoJson={selectedGeoJson} />
     </MapContainer>
   );
 };
