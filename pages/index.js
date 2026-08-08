@@ -341,7 +341,19 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [cloudCover]);
 
+  // Penanda permintaan yang sedang berlaku. Nomornya naik setiap kali
+  // konfigurasi berubah; respons bernomor lama tidak boleh dipakai lagi.
+  const requestIdRef = useRef(0);
+
   const resetData = () => {
+    // Permintaan yang masih berjalan dibatalkan di sini. Tanpa ini, hasil dari
+    // konfigurasi lama tetap mendarat di layar yang sudah berpindah — misalnya
+    // angka prediksi muncul setelah user kembali ke mode historis, atau hasil
+    // mode tunggal masuk ke tampilan perbandingan yang hanya berisi satu sisi.
+    requestIdRef.current += 1;
+    setLoading(false);
+    toast.dismiss();
+
     setMapUrl(null);
     setMapUrlRight(null);
     setStats(null);
@@ -373,16 +385,24 @@ export default function Home() {
 
   const handleRegionChange = (e) => {
     const newRegion = e.target.value;
+    // Sudah ada hasil di layar? Dicatat sebelum resetData mengosongkannya.
+    const adaHasil = !!stats;
+
     setRegion(newRegion);
     if (newRegion === 'Seluruh Bali') setSelectedGeoJson(baliData);
     else {
       const feature = baliData.features.find(f => f.properties.nm_kabkota === newRegion);
       if (feature) setSelectedGeoJson(feature);
     }
-    // Hasil lama dibersihkan seperti pada pergantian mode dan jenis layer.
-    // Tanpa ini, panel masih menampilkan angka wilayah sebelumnya sementara
-    // dropdown sudah menunjuk wilayah baru — statistik jadi salah label.
+
+    // Angka wilayah lama dibuang dulu supaya tidak sempat terbaca sebagai angka
+    // wilayah baru, lalu langsung diambil ulang. Server menghitung seluruh
+    // kabupaten dalam satu permintaan dan menyimpannya di cache, jadi pindah
+    // wilayah biasanya kembali seketika — itulah gunanya cache lintas wilayah.
+    // Kalau belum ada hasil sama sekali, jangan memicu perhitungan yang tidak
+    // diminta: user menekan tombol prosesnya sendiri.
     resetData();
+    if (adaHasil) fetchData({ regionOverride: newRegion });
   };
 
   const handleTypeChange = (type) => {
@@ -400,10 +420,10 @@ export default function Home() {
   // Parameter permintaan mode tunggal. Dipakai bersama oleh proses analisis dan
   // penyiapan berkas unduhan, supaya keduanya tidak pernah menghitung citra yang
   // berbeda tanpa disadari.
-  const buildSingleModeParams = () => new URLSearchParams({
+  const buildSingleModeParams = (regionName = region) => new URLSearchParams({
     mode: analysisMode,
     type: layerType,
-    region_name: region === 'Seluruh Bali' ? 'ALL' : region,
+    region_name: regionName === 'Seluruh Bali' ? 'ALL' : regionName,
     start_date: startDate.toISOString().split('T')[0],
     end_date: endDate.toISOString().split('T')[0],
     cloud_cover: debouncedCloudCover,
@@ -440,7 +460,17 @@ export default function Home() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async ({ regionOverride } = {}) => {
+    // Nomor permintaan ini. Kalau saat respons tiba nomornya sudah tidak
+    // berlaku — user berpindah mode, wilayah, atau jenis layer di tengah
+    // proses — hasilnya dibuang, bukan dipasang ke layar yang sudah berubah.
+    const requestId = ++requestIdRef.current;
+    const isStale = () => requestId !== requestIdRef.current;
+
+    // Wilayah dibaca dari argumen bila dipanggil dari handler yang baru saja
+    // meng-set state-nya; setState belum terlihat di dalam handler yang sama.
+    const activeRegion = regionOverride ?? region;
+
     setLoading(true);
     toast.dismiss();
     setSnapshotLoaded(false);
@@ -456,7 +486,7 @@ export default function Home() {
     let fromCache = false;
 
     try {
-      const regionParam = region === 'Seluruh Bali' ? 'ALL' : region;
+      const regionParam = activeRegion === 'Seluruh Bali' ? 'ALL' : activeRegion;
 
       if (visualMode === 'split') {
         const paramsLeft = new URLSearchParams({
@@ -480,6 +510,7 @@ export default function Home() {
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!resLeft.ok || !resRight.ok) {
+          if (isStale()) return;
           const errRes = !resLeft.ok ? resLeft : resRight;
           const errData = await errRes.json().catch(() => ({}));
           if (errData.error === 'TIMEOUT') {
@@ -487,12 +518,12 @@ export default function Home() {
           } else {
             toast.error(errData.error || 'Gagal mengambil data Satelit.', { id: toastId });
           }
-          setLoading(false);
           return;
         }
 
         const dataLeft = await resLeft.json();
         const dataRight = await resRight.json();
+        if (isStale()) return;
 
         // Kedua request paralel — waktu tunggu nyata ≈ yang terlama
         serverMs = Math.max(dataLeft.processing_time_ms ?? 0, dataRight.processing_time_ms ?? 0) || null;
@@ -512,12 +543,13 @@ export default function Home() {
         setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
 
       } else {
-        const params = buildSingleModeParams();
+        const params = buildSingleModeParams(activeRegion);
 
         const res = await fetch(`/api/map-layer?${params}`);
 
         // Cek error dengan pesan spesifik (termasuk timeout)
         if (!res.ok) {
+          if (isStale()) return;
           const errData = await res.json().catch(() => ({}));
           if (errData.error === 'TIMEOUT') {
             toast.warning(
@@ -527,11 +559,11 @@ export default function Home() {
           } else {
             toast.error(errData.error || 'Gagal memproses data.', { id: toastId });
           }
-          setLoading(false);
           return;
         }
 
         const data = await res.json();
+        if (isStale()) return;
 
         serverMs = data.processing_time_ms ?? null;
         fromCache = res.headers.get('X-Cache') === 'HIT';
@@ -552,9 +584,13 @@ export default function Home() {
 
     } catch (error) {
       console.error(error);
-      toast.error('Gagal memproses data. Periksa koneksi dan coba lagi.', { id: toastId });
+      if (!isStale()) toast.error('Gagal memproses data. Periksa koneksi dan coba lagi.', { id: toastId });
     } finally {
-      setLoading(false);
+      // Hanya permintaan yang masih berlaku yang boleh mematikan indikator
+      // proses. Permintaan basi yang selesai belakangan tidak boleh mengosongkan
+      // layar yang sedang menunggu permintaan penggantinya.
+      if (!isStale()) setLoading(false);
+      else toast.dismiss(toastId);
     }
   };
 
@@ -748,6 +784,10 @@ export default function Home() {
       );
     }
   };
+
+  // Hasil baru dianggap siap tampil kalau semua sisi yang dibutuhkan mode aktif
+  // sudah terisi — mode perbandingan butuh dua periode, bukan satu.
+  const hasResult = visualMode === 'split' ? !!(stats && statsRight) : !!stats;
 
   // Vis range gradient preview
   const visGradient = layerType === 'ndvi'
@@ -1145,7 +1185,7 @@ export default function Home() {
             </div>
 
             {/* HASIL / OUTPUT */}
-            {loading && !stats && (
+            {loading && !hasResult && (
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <span className="text-[13px] font-semibold text-slate-600 mb-4 text-center block animate-pulse">Memproses...</span>
                 {renderKPISkeleton()}
@@ -1157,7 +1197,7 @@ export default function Home() {
               </div>
             )}
 
-            {!stats && !loading && (
+            {!hasResult && !loading && (
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
@@ -1171,7 +1211,10 @@ export default function Home() {
               </div>
             )}
 
-            {stats && (
+            {/* Mode perbandingan menuntut kedua sisi ada. Kalau hanya satu yang
+                terisi, blok di bawah membaca statsRight yang kosong dan seluruh
+                halaman ikut mati — bukan sekadar salah tampil. */}
+            {hasResult && (
               <div id="tour-result-area" className="mt-8 pt-6 border-t border-slate-100 animate-fade-in">
                 {visualMode === 'split' ? (
                   <>
@@ -1277,7 +1320,7 @@ export default function Home() {
         {/* === MAP AREA === */}
         <div id="tour-map-area" className="relative flex-1 bg-slate-100 flex">
           <MapWithNoSSR mapUrl={mapUrl} mapUrlRight={mapUrlRight} isSplit={visualMode === 'split'} selectedGeoJson={selectedGeoJson} />
-          {stats && (
+          {hasResult && (
             <MapLegend
               type={layerType}
               min={parseFloat(visMin)}
