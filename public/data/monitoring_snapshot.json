@@ -1,6 +1,6 @@
 {
   "_note": "Auto-generated monitoring snapshot. Jalankan ulang scripts/generate-snapshot.js untuk refresh.",
-  "_generated_at": "2026-08-09T12:10:31.603Z",
+  "_generated_at": "2026-08-09T15:05:07.172Z",
   "_params": {
     "mode": "history",
     "type": "ndvi",
@@ -15,9 +15,9 @@
     "gap_fill": "none"
   },
   "map": {
-    "mapid": "projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-3b31f9e3f20cf140ca2431198076bc37",
+    "mapid": "projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-5ca1dfd8f903950795b7a0f20f8cf448",
     "token": "",
-    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-3b31f9e3f20cf140ca2431198076bc37/tiles/{z}/{x}/{y}"
+    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-5ca1dfd8f903950795b7a0f20f8cf448/tiles/{z}/{x}/{y}"
   },
   "stats": {
     "mean": 0.7395724289754968,
@@ -9683,6 +9683,68 @@
     {
       "ndvi": 0.5215530395507812,
       "lst": 34.123979615000025
+    }
+  ],
+  "seasonal": [
+    {
+      "month": 1,
+      "value": 0.7285965321009131,
+      "count": 10
+    },
+    {
+      "month": 2,
+      "value": 0.7165789888191392,
+      "count": 9
+    },
+    {
+      "month": 3,
+      "value": 0.7569387252010696,
+      "count": 23
+    },
+    {
+      "month": 4,
+      "value": 0.7356487062493136,
+      "count": 29
+    },
+    {
+      "month": 5,
+      "value": 0.7274280728025474,
+      "count": 36
+    },
+    {
+      "month": 6,
+      "value": 0.7220376083587562,
+      "count": 33
+    },
+    {
+      "month": 7,
+      "value": 0.7055782479501781,
+      "count": 39
+    },
+    {
+      "month": 8,
+      "value": 0.6839781896887618,
+      "count": 43
+    },
+    {
+      "month": 9,
+      "value": 0.65407432949862,
+      "count": 43
+    },
+    {
+      "month": 10,
+      "value": 0.652538627768071,
+      "count": 37
+    },
+    {
+      "month": 11,
+      "value": 0.6430012390621153,
+      "count": 15
+    },
+    {
+      "month": 12,
+      "value": 0.702871961084573,
+      "count": 13
     }
   ],
   "scenes": [

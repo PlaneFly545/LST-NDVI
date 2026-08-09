@@ -82,6 +82,7 @@ http.get(options, (res) => {
       stats: data.stats,
       chart: data.chart,
       scatter: data.scatter,
+      seasonal: data.seasonal || [],
       scenes: data.scenes || [],
       downloadUrl: data.downloadUrl || null,
     };

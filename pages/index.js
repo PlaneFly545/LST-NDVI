@@ -60,6 +60,11 @@ const withUnit = (value, unit) => (unit ? `${value} ${unit}` : `${value}`);
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
+const MONTH_NAME = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
 /**
  * 'YYYY-MM-DD' → '12 Jun 2019'.
  *
@@ -222,6 +227,12 @@ export default function Home() {
   const [scenesRight, setScenesRight] = useState([]);
   const [showSceneDates, setShowSceneDates] = useState(false);
 
+  // Profil musiman: [{ month, value, count }] dengan month 1–12. Di mode
+  // historis tiap titik adalah rata-rata seluruh citra bulan itu sepanjang
+  // periode; di mode prediksi nilainya keluaran model dan count-nya null.
+  const [seasonalData, setSeasonalData] = useState([]);
+  const [seasonalDataRight, setSeasonalDataRight] = useState([]);
+
   const [activeSplitSide, setActiveSplitSide] = useState('left'); // 'left' | 'right'
 
   const [preparingTiff, setPreparingTiff] = useState(false);
@@ -349,6 +360,7 @@ export default function Home() {
       // Snapshot lama belum menyimpan daftar citra; tanpa kunci ini bagian
       // "Tanggal citra" cukup tidak muncul, bukan menampilkan daftar kosong.
       setScenes(snapshot.scenes || []);
+      setSeasonalData(snapshot.seasonal || []);
       if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
 
       // Sinkronisasi parameter filter dengan data snapshot yang dimuat
@@ -483,6 +495,8 @@ export default function Home() {
     setScenes([]);
     setScenesRight([]);
     setShowSceneDates(false);
+    setSeasonalData([]);
+    setSeasonalDataRight([]);
     setActiveSplitSide('left');
   };
 
@@ -647,6 +661,8 @@ export default function Home() {
         setScatterDataRight(dataRight.scatter || []);
         setScenes(dataLeft.scenes || []);
         setScenesRight(dataRight.scenes || []);
+        setSeasonalData(dataLeft.seasonal || []);
+        setSeasonalDataRight(dataRight.seasonal || []);
         setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
 
       } else {
@@ -680,6 +696,7 @@ export default function Home() {
         setChartData(data.chart || []);
         setScatterData(data.scatter || []);
         setScenes(data.scenes || []);
+        setSeasonalData(data.seasonal || []);
       }
 
       const durasi = formatDuration(serverMs);
@@ -795,7 +812,33 @@ export default function Home() {
   };
 
   // Generator Teks Interpretasi
-  const renderChartSummary = (cMode, cData, sData, currentStats, tData) => {
+  const renderChartSummary = (cMode, cData, sData, currentStats, tData, seasonal = []) => {
+    if (cMode === 'seasonal') {
+      const valid = seasonal.filter((d) => Number.isFinite(d?.value));
+      if (valid.length < 2) return "Data bulanan belum cukup untuk membentuk profil musiman.";
+
+      const tertinggi = valid.reduce((a, b) => (b.value > a.value ? b : a));
+      const terendah = valid.reduce((a, b) => (b.value < a.value ? b : a));
+      const paramName = layerType === 'lst' ? 'suhu permukaan' : 'indeks vegetasi';
+      const unitSuffix = currentStats?.unit ? ` ${currentStats.unit}` : '';
+      const amplitudo = (tertinggi.value - terendah.value).toFixed(2);
+
+      const namaBulan = (m) => MONTH_NAME[Number(m) - 1] || `bulan ${m}`;
+
+      if (currentStats?.is_prediction) {
+        return `Untuk ${currentStats.target_year}, model memproyeksikan ${paramName} tertinggi pada ${namaBulan(tertinggi.month)} dan terendah pada ${namaBulan(terendah.month)}, dengan selisih ${amplitudo}${unitSuffix}. Pola ini berasal dari suku musiman regresi harmonik, bukan dari citra tahun tersebut.`;
+      }
+
+      // Penyebutan periode sengaja eksplisit: rentang sependek ini belum
+      // memenuhi syarat "normal iklim" WMO yang menuntut 30 tahun berturut-turut,
+      // jadi angkanya tidak boleh disebut normal.
+      const periode = currentStats?.baseline_start_year && currentStats?.baseline_end_year
+        ? `${currentStats.baseline_start_year}–${currentStats.baseline_end_year}`
+        : 'periode terpilih';
+
+      return `Rata-rata bulanan ${periode}: ${paramName} tertinggi pada ${namaBulan(tertinggi.month)} dan terendah pada ${namaBulan(terendah.month)}, dengan selisih ${amplitudo}${unitSuffix}. Angka ini rata-rata bulanan periode tersebut, bukan normal iklim.`;
+    }
+
     if (cMode === 'trend' && cData.length > 1) {
       const histData = cData.filter(d => !d.isPred);
       if (histData.length < 2) return "Data rentang waktu tidak cukup panjang untuk membentuk kesimpulan tren yang valid.";
@@ -841,9 +884,12 @@ export default function Home() {
 
   // Skeleton Loading untuk KPI Cards
   const renderKPISkeleton = () => (
+    // Bentuknya mengikuti kartu yang akan menggantikannya: mode historis punya
+    // empat kartu (rata-rata, minimum, maksimum, luas), prediksi tiga. Kalau
+    // rangkanya tidak ikut, tata letak melompat begitu data tiba.
     <div className="grid grid-cols-2 gap-3 mt-4">
-      {[1, 2, 3].map(i => (
-        <div key={i} className={`flex flex-col p-4 bg-white border border-slate-100 rounded-xl ${i === 3 ? 'col-span-2' : ''}`}>
+      {(analysisMode === 'prediksi' ? [1, 2, 3] : [1, 2, 3, 4]).map((i, idx, arr) => (
+        <div key={i} className={`flex flex-col p-4 bg-white border border-slate-100 rounded-xl ${idx === arr.length - 1 || (arr.length === 4 && idx === 0) ? 'col-span-2' : ''}`}>
           <div className="skeleton h-3 w-20 mb-3"></div>
           <div className="skeleton h-6 w-28"></div>
         </div>
@@ -861,6 +907,22 @@ export default function Home() {
       ? <span className="text-xs font-normal text-slate-400">{label.unit}</span>
       : null;
 
+    // Satu baris konteks untuk seluruh kartu: tanpa ini angka rata-rata,
+    // minimum, dan maksimum berdiri tanpa keterangan periode maupun wilayah.
+    const periode = stats.baseline_start_year && stats.baseline_end_year
+      ? `${stats.baseline_start_year}–${stats.baseline_end_year}`
+      : null;
+    const konteks = [
+      stats.is_prediction ? `Prediksi ${stats.target_year}` : periode,
+      stats.region === 'SELURUH BALI' ? 'Seluruh Bali' : stats.region,
+    ].filter(Boolean).join(' · ');
+
+    const contextLine = (
+      // Margin bawah negatif menahan mt-4 milik grid kartu; tanpa itu jarak
+      // baris konteks ke kartu pertama jadi sejauh jarak antar-bagian.
+      <p className="text-[11px] text-slate-400 text-center mt-1 -mb-2.5">{konteks}</p>
+    );
+
     if (stats.is_prediction) {
       const delta = stats.mean - stats.baseline_mean;
       const isWorse = layerType === 'lst' ? delta > 0 : delta < 0;
@@ -869,6 +931,8 @@ export default function Home() {
         : 'baseline';
 
       return (
+        <>
+        {contextLine}
         <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
           <div className={cardClass}>
             {/* Menyebut "rata-rata tahunan" secara eksplisit: angka ini mewakili
@@ -891,14 +955,25 @@ export default function Home() {
             </span>
           </div>
         </div>
+        </>
       );
     } else {
       return (
+        <>
+        {contextLine}
         <div className="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
-          <div className={cardClass}>
+          <div className={`col-span-2 ${cardClass}`}>
             <span className="text-[11px] text-slate-400 font-medium mb-1.5">Rata-rata {label.short}</span>
             <span className="text-xl font-bold text-slate-800 leading-none">
               {stats.mean.toFixed(2)} {unitTag}
+            </span>
+          </div>
+          {/* Minimum dan maksimum berdampingan karena keduanya membentuk satu
+              rentang nilai — dibaca sebagai sepasang, bukan dua angka lepas. */}
+          <div className={cardClass}>
+            <span className="text-[11px] text-slate-400 font-medium mb-1.5">Minimum {label.short}</span>
+            <span className="text-xl font-bold text-slate-800 leading-none">
+              {stats.min.toFixed(2)} {unitTag}
             </span>
           </div>
           <div className={cardClass}>
@@ -914,6 +989,7 @@ export default function Home() {
             </span>
           </div>
         </div>
+        </>
       );
     }
   };
@@ -960,6 +1036,24 @@ export default function Home() {
     const activeSData = isSplit ? (activeSplitSide === 'left' ? scatterData : scatterDataRight) : scatterData;
     const activeStats = isSplit ? (activeSplitSide === 'left' ? stats : statsRight) : stats;
     const activeScenes = isSplit ? (activeSplitSide === 'left' ? scenes : scenesRight) : scenes;
+    const activeSeasonal = isSplit
+      ? (activeSplitSide === 'left' ? seasonalData : seasonalDataRight)
+      : seasonalData;
+
+    // Nama bulan disiapkan di sini, bukan lewat tickFormatter, supaya tooltip
+    // dan sumbu membaca sumber yang sama.
+    const seasonalChartData = activeSeasonal.map((item) => ({
+      ...item,
+      label: MONTH_ABBR[Number(item.month) - 1] || String(item.month),
+    }));
+
+    // Profil musiman di mode prediksi memakai warna dan garis putus-putus yang
+    // sama dengan garis prediksi di grafik tren, supaya tidak tertukar dengan
+    // deret yang benar-benar berasal dari citra.
+    const seasonalIsPred = Boolean(activeStats?.is_prediction);
+    const seasonalColor = seasonalIsPred
+      ? '#f43f5e'
+      : (isSplit && activeSplitSide === 'right' ? '#0f172a' : '#334155');
 
     // Tahun pada sumbu X bisa datang sebagai angka maupun teks tergantung
     // sumbernya (API atau snapshot), jadi kuncinya diseragamkan ke angka.
@@ -1021,6 +1115,27 @@ export default function Home() {
       );
     };
 
+    const renderSeasonalTooltip = ({ active, payload }) => {
+      if (!active || !payload?.length) return null;
+
+      const point = payload[0]?.payload;
+      if (!point || point.value === null || point.value === undefined) return null;
+
+      return (
+        <div className="bg-white rounded-lg px-3 py-2 text-xs" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <p className="text-slate-500 mb-1">{MONTH_NAME[Number(point.month) - 1] || point.label}</p>
+          <p style={{ color: payload[0].color }}>
+            {payload[0].name} : {withUnit(Number(point.value).toFixed(2), chartUnit)}
+          </p>
+          {/* count bernilai null di mode prediksi: tahun targetnya belum punya
+              citra, jadi menyebut jumlah citra di situ akan menyesatkan. */}
+          {point.count !== null && point.count !== undefined && (
+            <p className="text-slate-400 mt-1">Dari {point.count} citra</p>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
         <div className="flex items-center justify-center mb-4 relative min-h-7">
@@ -1036,6 +1151,9 @@ export default function Home() {
         <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1 rounded-lg">
           <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
             <TrendingUp size={14} /> Tren Waktu
+          </button>
+          <button onClick={() => setChartMode('seasonal')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'seasonal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <BarChart3 size={14} /> Pola Musiman
           </button>
           <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
             <ScatterIcon size={14} /> Korelasi
@@ -1072,6 +1190,45 @@ export default function Home() {
                 {activeStats?.is_prediction && (
                   <Line type="monotone" dataKey="pred" name="Prediksi (rata-rata tahunan)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls={false} />
                 )}
+              </LineChart>
+            ) : chartMode === 'seasonal' ? (
+              <LineChart data={seasonalChartData} margin={chartMargin}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                {/* Sumbu X adalah bulan kalender, bukan urutan waktu: Januari di
+                    sini menggabungkan seluruh Januari sepanjang periode. */}
+                {/* interval={0} wajib: tanpa itu Recharts membuang label yang
+                    dikiranya bertabrakan, sehingga Mar, Agu, dan Nov hilang dan
+                    sumbunya terbaca bolong. Ukuran huruf diperkecil dan padding
+                    tepi dilepas supaya dua belas label muat tanpa dibuang. */}
+                <XAxis
+                  dataKey="label"
+                  interval={0}
+                  tick={{ fontSize: 9, fill: '#64748b' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  label={axisTitleX('Bulan')}
+                />
+                <YAxis
+                  domain={['auto', 'auto']}
+                  width={64}
+                  tick={axisTick}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  label={axisTitleY(chartAxisLabel)}
+                />
+                <Tooltip content={renderSeasonalTooltip} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name={seasonalIsPred ? `Prediksi bulanan ${activeStats.target_year}` : 'Rata-rata bulanan'}
+                  stroke={seasonalColor}
+                  strokeWidth={2}
+                  strokeDasharray={seasonalIsPred ? '5 5' : undefined}
+                  dot={{ r: 3, strokeWidth: 0, fill: seasonalColor }}
+                  connectNulls={false}
+                />
               </LineChart>
             ) : (
               <ScatterChart margin={chartMargin}>
@@ -1167,7 +1324,7 @@ export default function Home() {
         <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-2.5">
           <Info size={16} className="text-slate-300 shrink-0 mt-0.5" />
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            {renderChartSummary(chartMode, activeCData, activeSData, activeStats, trendData)}
+            {renderChartSummary(chartMode, activeCData, activeSData, activeStats, trendData, activeSeasonal)}
           </p>
         </div>
       </div>
