@@ -1583,19 +1583,26 @@ export default function Home() {
                 {analysisMode === 'prediksi' && (
                   <div className="mb-4">
                     <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                      Target prediksi: {targetYear}
+                      Target prediksi
                     </span>
+                    {/* Tombolnya menyebut tahunnya, bukan jaraknya. Bentuk
+                        "+5 tahun" terbaca sebagai perubahan yang terkumpul
+                        selama lima tahun, padahal keluaran model adalah nilai
+                        yang mewakili satu tahun target itu saja — lihat
+                        harmonicAnnualMean() yang membuang seluruh suku sin/cos. */}
                     <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-lg">
                       {predictionOffsets.map((offset) => (
                         <button key={offset} onClick={() => setPredictionOffset(offset)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${predictionOffset === offset ? 'bg-white shadow-sm border border-slate-200 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                          +{offset} tahun
+                          {baselineEndYear + offset}
                         </button>
                       ))}
                     </div>
-                    {/* Penguji mempersoalkan target yang terbaca sebagai tahun
-                        kalender; keterangan ini menegaskan titik hitungnya. */}
+                    {/* Dua hal yang tidak bisa dibaca dari angka tahun sendirian:
+                        apa yang dihitung (rata-rata setahun, bukan akumulasi
+                        sejak baseline) dan dari mana tahunnya bertolak (tahun
+                        kalender penuh terakhir, bukan tanggal akhir baseline). */}
                     <span className="text-[11px] text-slate-400 mt-1.5 block">
-                      Dihitung dari akhir baseline {baselineEndYear}
+                      Rata-rata tahunan {targetYear} · baseline berakhir {baselineEndYear}
                     </span>
                   </div>
                 )}
