@@ -51,7 +51,8 @@ export default async function handler(req, res) {
 
     const {
       normalizedType, normalizedMode, normalizedReducer, normalizedGapFill,
-      normalizedRegion, startDateInput, endDateInput, startDateObj, endDateObj,
+      normalizedRegion, startDateInput, endDateInput,
+      baselineStartYear, baselineEndYear,
       cloudThreshold, clampedTargetYear, visMin, visMax, thresholdVal,
     } = params;
 
@@ -94,8 +95,10 @@ export default async function handler(req, res) {
       ? ['red', 'yellow', 'green']
       : ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
 
-    const startYear = startDateObj.getUTCFullYear();
-    const endYear   = endDateObj.getUTCFullYear();
+    // Deret tahunan dan komposit rata-rata tahunan hanya memakai tahun kalender
+    // penuh — lihat resolveFullYearRange() di validator.
+    const startYear = baselineStartYear;
+    const endYear   = baselineEndYear;
 
     const { finalImage, baselineImage } = buildFinalImage({
       dualCollection,

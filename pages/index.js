@@ -21,6 +21,7 @@ import {
 import { Toaster, toast } from 'sonner';
 import { saveAs } from 'file-saver';
 import baliData from '../public/data/bali_kabkota.json';
+import { resolveFullYearRange } from '../lib/validators/queryParams';
 
 const MapWithNoSSR = dynamic(() => import('../components/Map'), {
   ssr: false,
@@ -70,6 +71,36 @@ const clampNum = (raw, lo, hi, fallback) => {
   if (Number.isNaN(n)) return fallback;
   return Math.min(Math.max(n, lo), hi);
 };
+
+// Rentang tanggal yang dipilih pengguna tidak selalu sama dengan tahun yang
+// benar-benar diagregasi, karena hanya tahun kalender penuh yang dihitung.
+// Keterangan ini sengaja hanya dirender saat keduanya memang berbeda: pengguna
+// yang sudah memilih 1 Januari–31 Desember tidak melihat teks tambahan apa pun.
+const FullYearNote = ({ years }) => {
+  if (!years) return null;
+  return (
+    <span className="text-[11px] text-slate-400 mt-1.5 block">
+      Dianalisis {years.startYear}–{years.endYear} · tahun kalender penuh
+    </span>
+  );
+};
+
+// Alasannya dipisah ke tooltip supaya baris keterangan di atas tetap sependek
+// mungkin. Pola hover-nya sama dengan penjelasan Pemrosesan Awan, tapi terbuka
+// ke bawah: kontrol ini duduk di bagian atas panel, jadi tooltip yang terbuka
+// ke atas terpotong tepi layar.
+const FullYearInfo = () => (
+  <div className="group relative cursor-help flex items-center">
+    <Info size={13} className="text-slate-300 hover:text-slate-500 transition-colors" />
+    <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-slate-800 text-white text-[11px] rounded-xl shadow-xl z-50 text-left leading-relaxed border border-slate-700">
+      <span className="block font-semibold text-slate-200 mb-1">Mengikuti standar WMO</span>
+      <span className="text-slate-400 block">
+        Periode acuan iklim WMO dibatasi tahun kalender penuh 1 Januari–31 Desember.
+        Tahun yang tercakup sebagian dibuang karena musimnya tidak lengkap.
+      </span>
+    </div>
+  </div>
+);
 
 const MapLegend = ({ type, min, max, isPrediction, targetYear }) => {
   const gradient = type === 'ndvi'
@@ -175,14 +206,37 @@ export default function Home() {
   // menggeser tahun target — bukan meninggalkan tahun basi dari tombol yang
   // ditekan sebelumnya.
   const [predictionOffset, setPredictionOffset] = useState(5);
-  const baselineStartYear = startDate.getFullYear();
-  const baselineEndYear = endDate.getFullYear();
+
+  // Tahun periode diturunkan dengan aturan yang sama persis seperti server:
+  // hanya tahun kalender penuh yang dihitung, dan sumbernya string tanggal yang
+  // benar-benar dikirim ke API (hasil toISOString), bukan objek Date lokal.
+  // Kalau dibaca dari Date lokal, label bisa meleset satu tahun dari yang
+  // dipakai server karena pergeseran zona waktu.
+  const toApiDate = (d) => d.toISOString().split('T')[0];
+  const fullYearsOf = (from, to) => resolveFullYearRange(
+    new Date(`${toApiDate(from)}T00:00:00.000Z`),
+    new Date(`${toApiDate(to)}T00:00:00.000Z`)
+  );
+
+  // Tahun mentah dari tanggal yang dipilih, dipakai hanya untuk mendeteksi
+  // apakah pemangkasan tahun penuh benar-benar terjadi.
+  const apiYear = (d) => Number(toApiDate(d).slice(0, 4));
+  const isTrimmed = (years, from, to) => (
+    years ? (years.startYear !== apiYear(from) || years.endYear !== apiYear(to)) : false
+  );
+
+  const baselineYears = fullYearsOf(startDate, endDate);
+  const baselineStartYear = baselineYears?.startYear ?? startDate.getFullYear();
+  const baselineEndYear = baselineYears?.endYear ?? endDate.getFullYear();
+  const baselineNote = isTrimmed(baselineYears, startDate, endDate) ? baselineYears : null;
   const targetYear = baselineEndYear + predictionOffset;
 
   // Label periode diisi tahunnya langsung. "Peta 1" tidak memberi tahu apa pun —
   // pembaca harus balik ke panel tanggal untuk tahu peta itu periode berapa.
   const periodeLabelKiri  = `Periode 1 · ${baselineStartYear}–${baselineEndYear}`;
-  const periodeLabelKanan = `Periode 2 · ${startDateRight.getFullYear()}–${endDateRight.getFullYear()}`;
+  const rightYears = fullYearsOf(startDateRight, endDateRight);
+  const rightNote = isTrimmed(rightYears, startDateRight, endDateRight) ? rightYears : null;
+  const periodeLabelKanan = `Periode 2 · ${rightYears?.startYear ?? startDateRight.getFullYear()}–${rightYears?.endYear ?? endDateRight.getFullYear()}`;
 
   const [gapFill, setGapFill] = useState('none');
 
@@ -856,6 +910,32 @@ export default function Home() {
       fontSize: 11, fill: '#64748b', style: { textAnchor: 'middle' },
     });
 
+    // Titik historis terakhir menyimpan salinan nilainya sendiri di kunci `pred`
+    // semata-mata sebagai jangkar agar garis putus-putus tersambung. Salinan itu
+    // bukan keluaran model, jadi barisnya dibuang dari tooltip: label "Prediksi"
+    // hanya boleh muncul di tahun target.
+    const renderTrendTooltip = ({ active, payload, label }) => {
+      if (!active || !payload?.length) return null;
+
+      const isPredPoint = payload[0]?.payload?.isPred === true;
+      const rows = payload.filter((row) => (
+        row.value !== null && row.value !== undefined
+        && (isPredPoint ? row.dataKey === 'pred' : row.dataKey !== 'pred')
+      ));
+      if (rows.length === 0) return null;
+
+      return (
+        <div className="bg-white rounded-lg px-3 py-2 text-xs" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <p className="text-slate-500 mb-1">Tahun {label}</p>
+          {rows.map((row) => (
+            <p key={row.dataKey} style={{ color: row.color }}>
+              {row.name} : {withUnit(Number(row.value).toFixed(2), chartUnit)}
+            </p>
+          ))}
+        </div>
+      );
+    };
+
     return (
       <div className="mt-6 pt-6 border-t border-slate-100">
         <div className="flex items-center justify-center mb-4 relative min-h-7">
@@ -899,11 +979,7 @@ export default function Home() {
                   axisLine={false}
                   label={axisTitleY(chartAxisLabel)}
                 />
-                <Tooltip
-                  contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                  labelFormatter={(value) => `Tahun ${value}`}
-                  formatter={(value, name) => [withUnit(Number(value).toFixed(2), chartUnit), name]}
-                />
+                <Tooltip content={renderTrendTooltip} />
                 <Line type="monotone" dataKey="value" name="Rata-rata tahunan" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
                 {activeStats?.is_prediction && (
                   <Line type="monotone" dataKey="pred" name="Prediksi (rata-rata tahunan)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls={false} />
@@ -1112,24 +1188,32 @@ export default function Home() {
                 )}
 
                 <div className="mb-4">
-                  <span className="text-xs font-medium text-slate-500 mb-1.5 block">
-                    {visualMode === 'split' ? 'Periode 1' : (analysisMode === 'prediksi' ? 'Periode baseline' : 'Rentang Tanggal')}
-                  </span>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-xs font-medium text-slate-500">
+                      {visualMode === 'split' ? 'Periode 1' : (analysisMode === 'prediksi' ? 'Periode baseline' : 'Rentang Tanggal')}
+                    </span>
+                    {baselineNote && <FullYearInfo />}
+                  </div>
                   <div className="flex items-center gap-2">
                     <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                     <span className="text-slate-300 text-sm">—</span>
                     <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                   </div>
+                  <FullYearNote years={baselineNote} />
                 </div>
 
                 {visualMode === 'split' && (
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 mb-1.5 block">Periode 2</span>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-xs font-medium text-slate-500">Periode 2</span>
+                      {rightNote && <FullYearInfo />}
+                    </div>
                     <div className="flex items-center gap-2">
                       <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                       <span className="text-slate-300 text-sm">—</span>
                       <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
                     </div>
+                    <FullYearNote years={rightNote} />
                   </div>
                 )}
 

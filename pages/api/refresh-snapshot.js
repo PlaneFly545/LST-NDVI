@@ -6,6 +6,7 @@ import path from 'path';
 import { authenticate, withTimeout, TIMEOUT_ERROR_TAG } from '../../lib/gee/auth';
 import { buildCacheKey, getCached, setCache } from '../../lib/gee/cache';
 import { resolveGeometry, buildDualCollection, buildFinalImage, runGeeEvaluation } from '../../lib/gee/compute';
+import { resolveFullYearRange } from '../../lib/validators/queryParams';
 
 const REQUEST_TIMEOUT_MS = 180_000; // 3 menit (lebih longgar untuk background job)
 
@@ -59,8 +60,15 @@ export default async function handler(req, res) {
       ? ['red', 'yellow', 'green']
       : ['040274', '2c7bb6', 'abd9e9', 'ffffbf', 'fdae61', 'd7191c', '7a0403'];
 
-    const startYear = new Date(params.start_date).getUTCFullYear();
-    const endYear   = new Date(params.end_date).getUTCFullYear();
+    // Sama seperti /api/map-layer: hanya tahun kalender penuh yang diagregasi.
+    const fullYears = resolveFullYearRange(
+      new Date(`${params.start_date}T00:00:00.000Z`),
+      new Date(`${params.end_date}T00:00:00.000Z`)
+    );
+    if (!fullYears) {
+      return res.status(422).json({ error: 'Periode snapshot tidak memuat satu pun tahun kalender penuh.' });
+    }
+    const { startYear, endYear } = fullYears;
 
     const { finalImage, baselineImage } = buildFinalImage({
       dualCollection,
