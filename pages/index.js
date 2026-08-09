@@ -7,6 +7,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { shift } from '@floating-ui/react';
 import {
   Leaf, ThermometerSun, Activity, Menu, Download, FileDown,
   ChevronDown, AlertTriangle, ScatterChart as ScatterIcon,
@@ -56,6 +57,31 @@ const LAYER_LABEL = {
 
 /** Tempelkan satuan bila ada, tanpa meninggalkan spasi menggantung. */
 const withUnit = (value, unit) => (unit ? `${value} ${unit}` : `${value}`);
+
+// Wadah portal kalender. react-datepicker membuat sendiri elemen ber-id ini di
+// <body> saat kalender pertama kali dibuka, jadi tidak perlu dirender manual.
+// Penataan lapisannya ada di .react-datepicker-popper (styles/globals.css).
+const DATEPICKER_PORTAL_ID = 'datepicker-portal';
+
+// Middleware bawaan react-datepicker hanya flip, offset, dan arrow — tidak ada
+// satu pun yang menggeser kalender ke samping saat ia keluar layar. Padahal
+// kalender jauh lebih lebar daripada input tanggal yang sempit, jadi julurnya
+// bisa melewati tepi jendela dan terpotong di situ.
+const DATEPICKER_POPPER_FIX = {
+  // Sejajarkan tepi kiri kalender ke tepi kiri input. Default floating-ui
+  // menengahkan kalender terhadap input, sehingga input paling kiri panel
+  // mendorong kalender keluar tepi kiri jendela.
+  popperPlacement: 'bottom-start',
+  // Jaring pengaman untuk sisanya: jendela sempit, panel mode overlay di layar
+  // kecil, dan input kanan yang dekat tepi kanan jendela.
+  popperModifiers: [shift({ padding: 8 })],
+  // position: fixed, bukan absolute. Blok penampung elemen fixed adalah viewport,
+  // jadi overflow milik leluhur mana pun tidak bisa memotongnya — termasuk kotak
+  // scroll panel kontrol. Ini menutup kemungkinan kalender masih terpotong
+  // seandainya portal tidak sepenuhnya bekerja, dan sekalian membuat shift
+  // mengukur terhadap viewport, bukan terhadap kotak yang lebih sempit.
+  popperProps: { strategy: 'fixed' },
+};
 
 // Titik grafik sekarang bertahun ({ year, value }). Snapshot yang dibuat sebelum
 // perubahan ini menyimpan tanggal ({ date: 'YYYY-MM-DD' }); dikonversi di sini
@@ -306,6 +332,19 @@ export default function Home() {
       if (params.region_name) {
         setRegion(params.region_name === 'ALL' ? 'Seluruh Bali' : params.region_name);
       }
+      // Rentang tanggal ikut disalin, bukan dibiarkan di nilai awal aplikasi.
+      // Label periode dan keterangan tahun kalender penuh diturunkan dari kedua
+      // pemilih tanggal ini, jadi kalau tidak disalin panel kiri menjelaskan
+      // periode yang berbeda dari grafik yang sedang tampil di sebelahnya.
+      // new Date('YYYY-MM-DD') dibaca sebagai tengah malam UTC — sama seperti
+      // landsatMinDate — sehingga toISOString() mengembalikan string yang persis
+      // sama saat rentang ini dikirim lagi ke API.
+      const snapshotStart = params.start_date ? new Date(params.start_date) : null;
+      const snapshotEnd = params.end_date ? new Date(params.end_date) : null;
+      // Tanggal cacat akan melempar RangeError di toISOString() pada render
+      // berikutnya dan menjatuhkan seluruh halaman, jadi dipastikan valid dulu.
+      if (snapshotStart && !Number.isNaN(snapshotStart.getTime())) setStartDate(snapshotStart);
+      if (snapshotEnd && !Number.isNaN(snapshotEnd.getTime())) setEndDate(snapshotEnd);
       if (params.vis_min !== undefined) setVisMin(parseFloat(params.vis_min));
       if (params.vis_max !== undefined) setVisMax(parseFloat(params.vis_max));
       if (params.threshold !== undefined) setThreshold(parseFloat(params.threshold));
@@ -898,10 +937,13 @@ export default function Home() {
 
     // Kedua grafik memakai margin, lebar sumbu, dan gaya label yang sama supaya
     // judul sumbu tidak berpindah-pindah posisi saat tab grafik ditukar.
-    const chartMargin = { top: 10, right: 12, bottom: 16, left: 0 };
+    const chartMargin = { top: 10, right: 12, bottom: 24, left: 0 };
     const axisTick = { fontSize: 11, fill: '#64748b' };
+    // Angka skala pertama sumbu X jatuh tepat di garis sumbu Y kalau tanpa
+    // padding, sehingga bertumpuk dengan angka skala Y terendah di pojok.
+    const axisPaddingX = { left: 12, right: 12 };
     const axisTitleX = (value) => ({
-      value, position: 'insideBottom', offset: -6, fontSize: 11, fill: '#64748b',
+      value, position: 'insideBottom', offset: -12, fontSize: 11, fill: '#64748b',
     });
     // textAnchor 'middle' wajib: tanpa itu teks tegak ditarik dari titik tengah
     // ke atas sehingga terpotong di tepi grafik.
@@ -969,6 +1011,8 @@ export default function Home() {
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
+                  padding={axisPaddingX}
                   label={axisTitleX('Tahun')}
                 />
                 <YAxis
@@ -977,6 +1021,7 @@ export default function Home() {
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
                   label={axisTitleY(chartAxisLabel)}
                 />
                 <Tooltip content={renderTrendTooltip} />
@@ -998,6 +1043,8 @@ export default function Home() {
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
+                  padding={axisPaddingX}
                   label={axisTitleX(LAYER_LABEL.ndvi.full)}
                 />
                 <YAxis
@@ -1009,6 +1056,7 @@ export default function Home() {
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
                   label={axisTitleY(LAYER_LABEL.lst.axis)}
                 />
                 <Tooltip
@@ -1194,10 +1242,13 @@ export default function Home() {
                     </span>
                     {baselineNote && <FullYearInfo />}
                   </div>
+                  {/* portalId wajib: panel ini kontainer scroll (overflow-y-auto),
+                      dan CSS memaksa overflow-x ikut terpotong. Tanpa portal,
+                      kalender yang lebih lebar dari input terpangkas tepi panel. */}
                   <div className="flex items-center gap-2">
-                    <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                    <DatePicker selected={startDate} onChange={setStartDate} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" portalId={DATEPICKER_PORTAL_ID} {...DATEPICKER_POPPER_FIX} />
                     <span className="text-slate-300 text-sm">—</span>
-                    <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                    <DatePicker selected={endDate} onChange={setEndDate} minDate={startDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" portalId={DATEPICKER_PORTAL_ID} {...DATEPICKER_POPPER_FIX} />
                   </div>
                   <FullYearNote years={baselineNote} />
                 </div>
@@ -1209,9 +1260,9 @@ export default function Home() {
                       {rightNote && <FullYearInfo />}
                     </div>
                     <div className="flex items-center gap-2">
-                      <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                      <DatePicker selected={startDateRight} onChange={setStartDateRight} minDate={landsatMinDate} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" portalId={DATEPICKER_PORTAL_ID} {...DATEPICKER_POPPER_FIX} />
                       <span className="text-slate-300 text-sm">—</span>
-                      <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" />
+                      <DatePicker selected={endDateRight} onChange={setEndDateRight} minDate={startDateRight} maxDate={new Date()} showMonthDropdown showYearDropdown dropdownMode="select" className="datepicker-input" dateFormat="dd/MM/yyyy" portalId={DATEPICKER_PORTAL_ID} {...DATEPICKER_POPPER_FIX} />
                     </div>
                     <FullYearNote years={rightNote} />
                   </div>

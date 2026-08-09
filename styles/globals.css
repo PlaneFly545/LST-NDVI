@@ -81,6 +81,24 @@
   border-color: var(--color-slate-400);
 }
 
+/* Kalender dirender lewat portal di <body> (portalId), supaya tidak terpotong
+   kotak scroll panel kontrol. Konsekuensinya lapisannya harus ditinggikan
+   manual: di layar kecil panel kontrol memakai z-3000, dan portal yang duduk
+   di <body> tanpa z-index akan tertimbun panel itu. */
+.react-datepicker-popper {
+  z-index: 4000 !important;
+}
+
+/* Wadah portalnya sendiri juga diangkat, bukan cuma popper di dalamnya. Peta
+   memakai Leaflet, yang menaruh pane-nya di z-index 400-1000 tanpa membuat
+   konteks penumpukan sendiri, sehingga pane itu bersaing langsung di konteks
+   akar. Dengan konteks penumpukan di wadah portal, seluruh isinya dijamin
+   berada di atas peta apa pun z-index internal komponen kalender. */
+#datepicker-portal {
+  position: relative;
+  z-index: 4000;
+}
+
 /* Calendar popup container */
 .react-datepicker {
   font-family: "Inter", system-ui, sans-serif !important;
