@@ -57,6 +57,7 @@ export default async function handler(req, res) {
       normalizedType, normalizedMode, normalizedReducer, normalizedGapFill,
       normalizedRegion, startDateInput, endDateInput,
       baselineStartYear, baselineEndYear,
+      seriesStartYear, seriesEndYear, hasFullYear,
       cloudThreshold, clampedTargetYear, visMin, visMax, thresholdVal,
     } = params;
 
@@ -127,6 +128,8 @@ export default async function handler(req, res) {
       runGeeEvaluation({
         finalImage, baselineImage, mainBand, geometry, visParams, thresholdVal,
         dualCollection, startYear, endYear,
+        seriesStartYear, seriesEndYear, hasFullYear,
+        startDateInput, endDateInput,
         mode: normalizedMode, normalizedType,
         targetYear: clampedTargetYear,
       }),

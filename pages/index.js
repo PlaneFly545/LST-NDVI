@@ -124,6 +124,18 @@ const clampNum = (raw, lo, hi, fallback) => {
 // yang sudah memilih 1 Januari–31 Desember tidak melihat teks tambahan apa pun.
 const FullYearNote = ({ years }) => {
   if (!years) return null;
+
+  // Periode yang tidak memuat satu pun tahun penuh tetap boleh dianalisis, tapi
+  // tidak punya rentang tahun untuk disebut — yang bisa dikatakan hanya bahwa
+  // tahunnya tercakup sebagian.
+  if (years.partial) {
+    return (
+      <span className="text-[11px] text-amber-600 mt-1.5 block">
+        Belum memuat tahun kalender penuh · tahun sebagian akan ditandai di grafik
+      </span>
+    );
+  }
+
   return (
     <span className="text-[11px] text-slate-400 mt-1.5 block">
       Dianalisis {years.startYear}–{years.endYear} · tahun kalender penuh
@@ -287,14 +299,21 @@ export default function Home() {
   const baselineYears = fullYearsOf(startDate, endDate);
   const baselineStartYear = baselineYears?.startYear ?? startDate.getFullYear();
   const baselineEndYear = baselineYears?.endYear ?? endDate.getFullYear();
-  const baselineNote = isTrimmed(baselineYears, startDate, endDate) ? baselineYears : null;
+  // Tiga keadaan, bukan dua: rentang pas di tahun penuh (tanpa catatan), rentang
+  // terpangkas ke tahun penuh (catatan tahun mana yang dipakai), dan rentang
+  // yang tidak memuat tahun penuh sama sekali (catatan bahwa tidak ada).
+  const baselineNote = baselineYears
+    ? (isTrimmed(baselineYears, startDate, endDate) ? baselineYears : null)
+    : { partial: true };
   const targetYear = baselineEndYear + predictionOffset;
 
   // Label periode diisi tahunnya langsung. "Peta 1" tidak memberi tahu apa pun —
   // pembaca harus balik ke panel tanggal untuk tahu peta itu periode berapa.
   const periodeLabelKiri  = `Periode 1 · ${baselineStartYear}–${baselineEndYear}`;
   const rightYears = fullYearsOf(startDateRight, endDateRight);
-  const rightNote = isTrimmed(rightYears, startDateRight, endDateRight) ? rightYears : null;
+  const rightNote = rightYears
+    ? (isTrimmed(rightYears, startDateRight, endDateRight) ? rightYears : null)
+    : { partial: true };
   const periodeLabelKanan = `Periode 2 · ${rightYears?.startYear ?? startDateRight.getFullYear()}–${rightYears?.endYear ?? endDateRight.getFullYear()}`;
 
   const [gapFill, setGapFill] = useState('none');
@@ -600,6 +619,30 @@ export default function Home() {
 
     const toastId = toast.loading(loadingMsg);
 
+    // Peringatan periode tak penuh dimunculkan sebelum angkanya sempat dibaca,
+    // bukan sesudah. Analisisnya sendiri tetap berjalan — yang dibatasi cuma
+    // penafsirannya, dan itu tidak bisa disampaikan setelah pembaca terlanjur
+    // menyimpulkan sendiri dari grafik.
+    //
+    // Mode split selalu dikirim sebagai historis (lihat paramsLeft/paramsRight),
+    // jadi pelonggaran ini berlaku di sana juga. Prediksi tidak pernah sampai ke
+    // sini tanpa tahun penuh: validator menolaknya lebih dulu.
+    const modeHistoris = visualMode === 'split' || analysisMode === 'history';
+    const periodeTakPenuh = visualMode === 'split'
+      ? [!baselineYears && 'Periode 1', !rightYears && 'Periode 2'].filter(Boolean)
+      : (baselineYears ? [] : ['Periode']);
+
+    if (modeHistoris && periodeTakPenuh.length > 0) {
+      toast.warning(
+        `${periodeTakPenuh.join(' dan ')} belum memuat satu tahun kalender penuh.`,
+        {
+          description:
+            'WMO membatasi periode acuan iklim pada tahun kalender penuh 1 Januari–31 Desember agar setiap tahun mewakili siklus musim yang sama. Analisis tetap dijalankan, tapi nilai tahunannya dihitung dari sebagian bulan saja dan tidak sebanding dengan tahun penuh.',
+          duration: 10000,
+        }
+      );
+    }
+
     // Waktu pemrosesan server (dari API) + status cache (dari header X-Cache)
     let serverMs = null;
     let fromCache = false;
@@ -839,12 +882,22 @@ export default function Home() {
       return `Rata-rata bulanan ${periode}: ${paramName} tertinggi pada ${namaBulan(tertinggi.month)} dan terendah pada ${namaBulan(terendah.month)}, dengan selisih ${amplitudo}${unitSuffix}. Angka ini rata-rata bulanan periode tersebut, bukan normal iklim.`;
     }
 
-    if (cMode === 'trend' && cData.length > 1) {
+    if (cMode === 'trend' && cData.length > 0) {
       const histData = cData.filter(d => !d.isPred);
-      if (histData.length < 2) return "Data rentang waktu tidak cukup panjang untuk membentuk kesimpulan tren yang valid.";
 
-      const first = histData[0];
-      const last = histData[histData.length - 1];
+      // Klaim arah tren hanya boleh bersandar pada tahun kalender penuh. Tahun
+      // tercakup sebagian tetap tergambar di grafik, tapi memakainya sebagai
+      // ujung perhitungan berarti mengukur selisih musim dan menyebutnya
+      // perubahan antar tahun. `complete` tidak ada pada data lama, dan
+      // undefined di sini berarti lengkap.
+      const lengkap = histData.filter((d) => d.complete !== false);
+
+      if (lengkap.length < 2) {
+        return "Periode ini belum memuat dua tahun kalender penuh, jadi arah tren belum bisa disimpulkan. Nilai per tahun tetap ditampilkan pada grafik, dengan tahun yang tidak lengkap diberi penanda.";
+      }
+
+      const first = lengkap[0];
+      const last = lengkap[lengkap.length - 1];
       const diff = last.value - first.value;
       const paramName = layerType === 'lst' ? 'suhu permukaan' : 'indeks vegetasi';
       const trendDir = diff > 0 ? 'naik' : 'turun';
@@ -909,9 +962,17 @@ export default function Home() {
 
     // Satu baris konteks untuk seluruh kartu: tanpa ini angka rata-rata,
     // minimum, dan maksimum berdiri tanpa keterangan periode maupun wilayah.
-    const periode = stats.baseline_start_year && stats.baseline_end_year
-      ? `${stats.baseline_start_year}–${stats.baseline_end_year}`
-      : null;
+    //
+    // Periode tanpa satu pun tahun kalender penuh dilabeli dengan tanggalnya,
+    // bukan "2026–2026". Label tahun pada data enam bulan terbaca sebagai
+    // setahun utuh, dan itu keliru dengan cara yang tidak kelihatan.
+    const periode = stats.has_full_year === false
+      ? (stats.period_start && stats.period_end
+        ? `${formatSceneDate(stats.period_start)} – ${formatSceneDate(stats.period_end)}`
+        : null)
+      : (stats.baseline_start_year && stats.baseline_end_year
+        ? `${stats.baseline_start_year}–${stats.baseline_end_year}`
+        : null);
     const konteks = [
       stats.is_prediction ? `Prediksi ${stats.target_year}` : periode,
       stats.region === 'SELURUH BALI' ? 'Seluruh Bali' : stats.region,
@@ -1062,6 +1123,12 @@ export default function Home() {
     const trendData = getTrendLineData(activeSData);
     const displayChartData = getDisplayChartData(activeCData, activeStats);
 
+    // Tahun yang belum tercakup dua belas bulan. `complete` baru ada sejak
+    // pelonggaran periode; data lama (snapshot yang belum diregenerasi) tidak
+    // punya kunci itu, dan undefined di sini harus berarti "lengkap" supaya
+    // grafik lama tidak mendadak penuh penanda.
+    const adaTahunTakLengkap = activeCData.some((d) => d?.complete === false);
+
     const chartAxisLabel = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).axis;
     const chartUnit = (LAYER_LABEL[layerType] || LAYER_LABEL.lst).unit;
 
@@ -1100,18 +1167,51 @@ export default function Home() {
       // tidak punya citra sama sekali — nilainya hasil ekstrapolasi model.
       const sceneCount = isPredPoint ? undefined : sceneCountByYear.get(Number(label));
 
+      // Tahun yang tercakup sebagian tidak boleh memakai kata "tahunan": yang
+      // dihitung cuma bulan-bulan yang kebetulan masuk rentang, dan di daerah
+      // tropis pemilihan bulan itu sendiri sudah menggeser angkanya.
+      const takLengkap = payload[0]?.payload?.complete === false;
+
       return (
         <div className="bg-white rounded-lg px-3 py-2 text-xs" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <p className="text-slate-500 mb-1">Tahun {label}</p>
           {rows.map((row) => (
             <p key={row.dataKey} style={{ color: row.color }}>
-              {row.name} : {withUnit(Number(row.value).toFixed(2), chartUnit)}
+              {takLengkap && row.dataKey !== 'pred' ? 'Rata-rata sebagian tahun' : row.name}
+              {' : '}{withUnit(Number(row.value).toFixed(2), chartUnit)}
             </p>
           ))}
           {sceneCount !== undefined && (
             <p className="text-slate-400 mt-1">Dari {sceneCount} citra</p>
           )}
+          {takLengkap && (
+            <p className="text-amber-600 mt-1">Tahun tidak lengkap — belum 12 bulan</p>
+          )}
         </div>
+      );
+    };
+
+    // Titik hanya digambar untuk tahun tidak lengkap. Tahun penuh tetap tanpa
+    // bulatan seperti sebelumnya, jadi kehadiran bulatan itu sendiri yang
+    // menjadi penandanya — tidak perlu simbol tambahan yang harus dihafal.
+    // Mengembalikan <g /> kosong, bukan null: Recharts memasang key pada hasil
+    // ini dan null akan memicu peringatan React.
+    const renderTrendDot = (props) => {
+      const { cx, cy, payload, index } = props;
+      if (payload?.complete !== false || cx === null || cy === null) {
+        return <g key={`dot-${index}`} />;
+      }
+
+      return (
+        <circle
+          key={`dot-${index}`}
+          cx={cx}
+          cy={cy}
+          r={4}
+          fill="#ffffff"
+          stroke="#f59e0b"
+          strokeWidth={2}
+        />
       );
     };
 
@@ -1186,7 +1286,18 @@ export default function Home() {
                   label={axisTitleY(chartAxisLabel)}
                 />
                 <Tooltip content={renderTrendTooltip} />
-                <Line type="monotone" dataKey="value" name="Rata-rata tahunan" stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"} strokeWidth={2} dot={false} />
+                {/* Garisnya tetap satu deret utuh; yang membedakan hanya titik.
+                    Tahun tidak lengkap diberi bulatan kuning berlubang — cukup
+                    terlihat untuk memancing hover, tanpa memutus bacaan garis
+                    seperti kalau deretnya dipecah dua. */}
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Rata-rata tahunan"
+                  stroke={isSplit && activeSplitSide === 'right' ? "#0f172a" : "#334155"}
+                  strokeWidth={2}
+                  dot={renderTrendDot}
+                />
                 {activeStats?.is_prediction && (
                   <Line type="monotone" dataKey="pred" name="Prediksi (rata-rata tahunan)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls={false} />
                 )}
@@ -1276,6 +1387,16 @@ export default function Home() {
             )}
           </ResponsiveContainer>
         </div>
+
+        {/* Keterangan penanda. Bulatan kuning tidak bisa menjelaskan dirinya
+            sendiri, dan barisnya hanya muncul kalau memang ada tahun yang
+            ditandai — supaya grafik yang seluruh tahunnya penuh tetap bersih. */}
+        {chartMode === 'trend' && adaTahunTakLengkap && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
+            <span className="inline-block w-2 h-2 rounded-full border-2 border-amber-500 bg-white shrink-0" />
+            Tahun tidak lengkap — dihitung dari sebagian bulan saja, tidak sebanding dengan tahun penuh.
+          </p>
+        )}
 
         {/* Rincian citra sumber. Hanya di tab tren, karena angka per tahun ini
             memang milik deret tahunan — scatter memakai satu komposit gabungan

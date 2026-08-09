@@ -1,6 +1,6 @@
 {
   "_note": "Auto-generated monitoring snapshot. Jalankan ulang scripts/generate-snapshot.js untuk refresh.",
-  "_generated_at": "2026-08-09T15:05:07.172Z",
+  "_generated_at": "2026-08-09T16:48:46.128Z",
   "_params": {
     "mode": "history",
     "type": "ndvi",
@@ -15,9 +15,9 @@
     "gap_fill": "none"
   },
   "map": {
-    "mapid": "projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-5ca1dfd8f903950795b7a0f20f8cf448",
+    "mapid": "projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-f5878ce338ba78310da3e62f682b7e82",
     "token": "",
-    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-5ca1dfd8f903950795b7a0f20f8cf448/tiles/{z}/{x}/{y}"
+    "urlFormat": "https://earthengine.googleapis.com/v1/projects/earthengine-legacy/maps/144be985e02d7fd925e9213feccb7d88-f5878ce338ba78310da3e62f682b7e82/tiles/{z}/{x}/{y}"
   },
   "stats": {
     "mean": 0.7395724289754968,
@@ -31,44 +31,66 @@
     "is_prediction": false,
     "target_year": 2030,
     "baseline_start_year": 2017,
-    "baseline_end_year": 2025
+    "baseline_end_year": 2025,
+    "has_full_year": true,
+    "period_start": "2016-08-09",
+    "period_end": "2026-08-09"
   },
   "chart": [
     {
+      "year": 2016,
+      "value": 0.7203019170891614,
+      "complete": false
+    },
+    {
       "year": 2017,
-      "value": 0.699159590899589
+      "value": 0.699159590899589,
+      "complete": true
     },
     {
       "year": 2018,
-      "value": 0.696349030606941
+      "value": 0.696349030606941,
+      "complete": true
     },
     {
       "year": 2019,
-      "value": 0.6717441740212894
+      "value": 0.6717441740212894,
+      "complete": true
     },
     {
       "year": 2020,
-      "value": 0.708662963518218
+      "value": 0.708662963518218,
+      "complete": true
     },
     {
       "year": 2021,
-      "value": 0.7136585280426703
+      "value": 0.7136585280426703,
+      "complete": true
     },
     {
       "year": 2022,
-      "value": 0.721886140159343
+      "value": 0.721886140159343,
+      "complete": true
     },
     {
       "year": 2023,
-      "value": 0.7005121761677332
+      "value": 0.7005121761677332,
+      "complete": true
     },
     {
       "year": 2024,
-      "value": 0.7040522636439062
+      "value": 0.7040522636439062,
+      "complete": true
     },
     {
       "year": 2025,
-      "value": 0.7158279671495184
+      "value": 0.7158279671495184,
+      "complete": true
+    },
+    {
+      "year": 2026,
+      "value": 0.7374600711221694,
+      "complete": false
     }
   ],
   "scatter": [
@@ -9749,6 +9771,48 @@
   ],
   "scenes": [
     {
+      "year": 2016,
+      "count": 11,
+      "dates": [
+        {
+          "date": "2016-08-23",
+          "n": 1
+        },
+        {
+          "date": "2016-08-30",
+          "n": 2
+        },
+        {
+          "date": "2016-09-08",
+          "n": 1
+        },
+        {
+          "date": "2016-09-15",
+          "n": 1
+        },
+        {
+          "date": "2016-10-01",
+          "n": 2
+        },
+        {
+          "date": "2016-10-10",
+          "n": 1
+        },
+        {
+          "date": "2016-10-17",
+          "n": 1
+        },
+        {
+          "date": "2016-11-18",
+          "n": 1
+        },
+        {
+          "date": "2016-12-29",
+          "n": 1
+        }
+      ]
+    },
+    {
       "year": 2017,
       "count": 32,
       "dates": [
@@ -10779,6 +10843,80 @@
         {
           "date": "2025-10-19",
           "n": 1
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "count": 22,
+      "dates": [
+        {
+          "date": "2026-01-30",
+          "n": 1
+        },
+        {
+          "date": "2026-02-15",
+          "n": 1
+        },
+        {
+          "date": "2026-03-28",
+          "n": 1
+        },
+        {
+          "date": "2026-04-04",
+          "n": 2
+        },
+        {
+          "date": "2026-04-13",
+          "n": 1
+        },
+        {
+          "date": "2026-04-20",
+          "n": 1
+        },
+        {
+          "date": "2026-05-06",
+          "n": 1
+        },
+        {
+          "date": "2026-05-15",
+          "n": 1
+        },
+        {
+          "date": "2026-05-22",
+          "n": 2
+        },
+        {
+          "date": "2026-05-31",
+          "n": 1
+        },
+        {
+          "date": "2026-06-07",
+          "n": 2
+        },
+        {
+          "date": "2026-06-16",
+          "n": 1
+        },
+        {
+          "date": "2026-06-23",
+          "n": 1
+        },
+        {
+          "date": "2026-07-02",
+          "n": 1
+        },
+        {
+          "date": "2026-07-09",
+          "n": 2
+        },
+        {
+          "date": "2026-07-18",
+          "n": 1
+        },
+        {
+          "date": "2026-07-25",
+          "n": 2
         }
       ]
     }
