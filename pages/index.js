@@ -58,6 +58,21 @@ const LAYER_LABEL = {
 /** Tempelkan satuan bila ada, tanpa meninggalkan spasi menggantung. */
 const withUnit = (value, unit) => (unit ? `${value} ${unit}` : `${value}`);
 
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+/**
+ * 'YYYY-MM-DD' → '12 Jun 2019'.
+ *
+ * String dipotong langsung, bukan dibungkus new Date(). Tanggal ini datang dari
+ * ee.Date.format() dalam UTC; melewatkannya ke Date lalu membacanya dengan
+ * getDate() akan digeser ke zona waktu lokal dan bisa mundur satu hari.
+ */
+const formatSceneDate = (iso) => {
+  const [year, month, day] = String(iso).split('-');
+  const name = MONTH_ABBR[Number(month) - 1];
+  return name ? `${Number(day)} ${name} ${year}` : String(iso);
+};
+
 // Wadah portal kalender. react-datepicker membuat sendiri elemen ber-id ini di
 // <body> saat kalender pertama kali dibuka, jadi tidak perlu dirender manual.
 // Penataan lapisannya ada di .react-datepicker-popper (styles/globals.css).
@@ -200,6 +215,13 @@ export default function Home() {
   const [chartDataRight, setChartDataRight] = useState([]);
   const [scatterDataRight, setScatterDataRight] = useState([]);
 
+  // Daftar citra sumber per tahun: [{ year, count, dates: [{ date, n }] }].
+  // Dipakai untuk menyebut jumlah citra di tooltip tren dan merinci tanggal
+  // perekamannya di bawah grafik.
+  const [scenes, setScenes] = useState([]);
+  const [scenesRight, setScenesRight] = useState([]);
+  const [showSceneDates, setShowSceneDates] = useState(false);
+
   const [activeSplitSide, setActiveSplitSide] = useState('left'); // 'left' | 'right'
 
   const [preparingTiff, setPreparingTiff] = useState(false);
@@ -324,6 +346,9 @@ export default function Home() {
       setStats(snapshot.stats);
       setChartData(normalizeChartPoints(snapshot.chart));
       setScatterData(snapshot.scatter || []);
+      // Snapshot lama belum menyimpan daftar citra; tanpa kunci ini bagian
+      // "Tanggal citra" cukup tidak muncul, bukan menampilkan daftar kosong.
+      setScenes(snapshot.scenes || []);
       if (snapshot._generated_at) setSnapshotDate(new Date(snapshot._generated_at));
 
       // Sinkronisasi parameter filter dengan data snapshot yang dimuat
@@ -455,6 +480,9 @@ export default function Home() {
     setScatterData([]);
     setChartDataRight([]);
     setScatterDataRight([]);
+    setScenes([]);
+    setScenesRight([]);
+    setShowSceneDates(false);
     setActiveSplitSide('left');
   };
 
@@ -617,6 +645,8 @@ export default function Home() {
         setScatterData(dataLeft.scatter || []);
         setChartDataRight(dataRight.chart || []);
         setScatterDataRight(dataRight.scatter || []);
+        setScenes(dataLeft.scenes || []);
+        setScenesRight(dataRight.scenes || []);
         setActiveSplitSide('left'); // Kembalikan fokus ke kiri setiap selesai proses
 
       } else {
@@ -649,6 +679,7 @@ export default function Home() {
         setStats(data.stats);
         setChartData(data.chart || []);
         setScatterData(data.scatter || []);
+        setScenes(data.scenes || []);
       }
 
       const durasi = formatDuration(serverMs);
@@ -928,6 +959,11 @@ export default function Home() {
     const activeCData = isSplit ? (activeSplitSide === 'left' ? chartData : chartDataRight) : chartData;
     const activeSData = isSplit ? (activeSplitSide === 'left' ? scatterData : scatterDataRight) : scatterData;
     const activeStats = isSplit ? (activeSplitSide === 'left' ? stats : statsRight) : stats;
+    const activeScenes = isSplit ? (activeSplitSide === 'left' ? scenes : scenesRight) : scenes;
+
+    // Tahun pada sumbu X bisa datang sebagai angka maupun teks tergantung
+    // sumbernya (API atau snapshot), jadi kuncinya diseragamkan ke angka.
+    const sceneCountByYear = new Map(activeScenes.map((item) => [Number(item.year), item.count]));
 
     const trendData = getTrendLineData(activeSData);
     const displayChartData = getDisplayChartData(activeCData, activeStats);
@@ -966,6 +1002,10 @@ export default function Home() {
       ));
       if (rows.length === 0) return null;
 
+      // Jumlah citra hanya berlaku untuk titik historis. Tahun target prediksi
+      // tidak punya citra sama sekali — nilainya hasil ekstrapolasi model.
+      const sceneCount = isPredPoint ? undefined : sceneCountByYear.get(Number(label));
+
       return (
         <div className="bg-white rounded-lg px-3 py-2 text-xs" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <p className="text-slate-500 mb-1">Tahun {label}</p>
@@ -974,6 +1014,9 @@ export default function Home() {
               {row.name} : {withUnit(Number(row.value).toFixed(2), chartUnit)}
             </p>
           ))}
+          {sceneCount !== undefined && (
+            <p className="text-slate-400 mt-1">Dari {sceneCount} citra</p>
+          )}
         </div>
       );
     };
@@ -1076,6 +1119,50 @@ export default function Home() {
             )}
           </ResponsiveContainer>
         </div>
+
+        {/* Rincian citra sumber. Hanya di tab tren, karena angka per tahun ini
+            memang milik deret tahunan — scatter memakai satu komposit gabungan
+            yang tidak dipecah per tahun. */}
+        {chartMode === 'trend' && activeScenes.length > 0 && (
+          <div className="mt-3 border border-slate-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setShowSceneDates(!showSceneDates)}
+              aria-expanded={showSceneDates}
+              className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-medium text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <Satellite size={13} className="text-slate-400" />
+                Tanggal citra yang dipakai
+              </span>
+              <ChevronDown size={14} className={`transition-transform ${showSceneDates ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSceneDates && (
+              <div className="px-3 pb-3 max-h-56 overflow-y-auto space-y-2.5">
+                {activeScenes.map((item) => (
+                  <div key={item.year}>
+                    <p className="text-[11px] font-semibold text-slate-600">
+                      {item.year} — {item.count} citra
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed break-words">
+                      {item.dates?.length
+                        ? item.dates
+                            .map((d) => (d.n > 1 ? `${formatSceneDate(d.date)} (${d.n})` : formatSceneDate(d.date)))
+                            .join(' · ')
+                        : 'Tidak ada citra yang lolos penyaringan.'}
+                    </p>
+                  </div>
+                ))}
+                <p className="text-[10px] text-slate-400 pt-2 border-t border-slate-100 leading-relaxed">
+                  Daftar ini adalah citra yang lolos batas tutupan awan, sebelum penutupan
+                  awan per piksel. Angka dalam kurung berarti ada lebih dari satu citra pada
+                  tanggal yang sama.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-2.5">
           <Info size={16} className="text-slate-300 shrink-0 mt-0.5" />

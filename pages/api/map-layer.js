@@ -26,6 +26,9 @@ function selectRegion(payload, region) {
     stats: payload.statsByRegion?.[key] || payload.statsByRegion?.ALL || null,
     chart: payload.chartByRegion?.[key] || [],
     scatter: payload.scatterByRegion?.[key] || [],
+    // Daftar citra sumber tidak dipecah per wilayah — koleksinya disaring dengan
+    // geometri seluruh Bali, jadi tahun dan tanggalnya sama untuk semua wilayah.
+    scenes: payload.scenesByYear || [],
   };
 }
 

@@ -82,6 +82,7 @@ http.get(options, (res) => {
       stats: data.stats,
       chart: data.chart,
       scatter: data.scatter,
+      scenes: data.scenes || [],
       downloadUrl: data.downloadUrl || null,
     };
 
