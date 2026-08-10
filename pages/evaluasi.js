@@ -304,9 +304,11 @@ export default function Evaluasi() {
                     kolomnya dibuat sama dengan baris butir supaya angka 1–7 di
                     sini tepat sejajar dengan angka 1–7 di bawahnya. */}
                 <div className="mb-3 md:mb-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 p-3 md:px-5 md:py-3 rounded-xl border border-dashed border-slate-200 bg-white">
-                    <span className="w-full md:w-1/4 text-center md:text-right text-xs font-medium text-slate-500">
-                        Isi semua butir kategori ini
-                    </span>
+                    {/* Dua span kosong ini penyangga lebar, bukan sisa teks yang
+                        terlupa: baris butir di bawah memakai label selebar 1/4 di
+                        kiri dan kanan, dan tanpa penyangga yang sama angka 1–7 di
+                        sini akan melenceng dari angka 1–7 di bawahnya. */}
+                    <span aria-hidden="true" className="hidden md:block md:w-1/4" />
 
                     <div className="flex justify-center w-full md:w-auto space-x-1.5 md:space-x-3">
                         {[1, 2, 3, 4, 5, 6, 7].map((num) => {
@@ -315,10 +317,11 @@ export default function Evaluasi() {
                                 <button
                                     key={num}
                                     onClick={() => handleSelectAllInCategory(num)}
+                                    aria-label={`Isi semua butir kategori ini dengan ${num}`}
                                     className="touch-manipulation outline-none cursor-pointer"
                                 >
                                     <div className={`
-                                        w-9 h-8 md:w-12 md:h-9 rounded-lg border text-xs md:text-sm font-bold flex items-center justify-center transition-all duration-200 select-none
+                                        w-9 h-11 md:w-12 md:h-14 rounded-lg md:rounded-xl border text-sm md:text-base font-bold flex items-center justify-center transition-all duration-200 select-none
                                         ${isSelected
                                             ? 'bg-slate-700 text-white border-slate-700'
                                             : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600 active:scale-95'
@@ -331,9 +334,7 @@ export default function Evaluasi() {
                         })}
                     </div>
 
-                    <span className="w-full md:w-1/4 text-center md:text-left text-[11px] text-slate-400">
-                        Masih bisa diubah per butir
-                    </span>
+                    <span aria-hidden="true" className="hidden md:block md:w-1/4" />
                 </div>
 
                 {/* Question Items */}
