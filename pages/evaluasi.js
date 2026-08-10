@@ -106,6 +106,29 @@ export default function Evaluasi() {
         setErrorMessage(null);
     };
 
+    // Isi serentak satu kategori. Butir yang sudah terjawab ikut tertimpa:
+    // kalau yang terisi saja yang dilewati, hasil klik jadi bergantung urutan
+    // pengisian sebelumnya dan pengguna tidak bisa menduga apa yang berubah.
+    // Cakupannya sengaja dibatasi pada kategori yang sedang tampil, jadi yang
+    // tertimpa selalu yang terlihat di layar.
+    const handleSelectAllInCategory = (value) => {
+        setAnswers(prev => {
+            const next = { ...prev };
+            for (const item of currentCategory.items) next[item.id] = value;
+            return next;
+        });
+        setErrorMessage(null);
+    };
+
+    // Nilai yang sedang berlaku untuk seluruh kategori, dipakai menyorot tombol
+    // isi serentak. null berarti isiannya beragam atau belum lengkap — dan itu
+    // keadaan yang wajar, karena nilai per butir tetap boleh diubah sesudahnya.
+    const uniformCategoryValue = (() => {
+        const first = answers[currentCategory.items[0]?.id];
+        if (first === undefined) return null;
+        return currentCategory.items.every(item => answers[item.id] === first) ? first : null;
+    })();
+
     const handlePrevCategory = () => {
         if (currentCategoryIndex > 0) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -273,6 +296,44 @@ export default function Evaluasi() {
                             </span>
                         </div>
                     </div>
+                </div>
+
+                {/* Isi serentak. Ditaruh di atas daftar, bukan di bawah, supaya
+                    terbaca sebagai titik awal pengisian dan bukan sebagai
+                    pembetulan setelah semua butir terlanjur dijawab. Lebar
+                    kolomnya dibuat sama dengan baris butir supaya angka 1–7 di
+                    sini tepat sejajar dengan angka 1–7 di bawahnya. */}
+                <div className="mb-3 md:mb-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 p-3 md:px-5 md:py-3 rounded-xl border border-dashed border-slate-200 bg-white">
+                    <span className="w-full md:w-1/4 text-center md:text-right text-xs font-medium text-slate-500">
+                        Isi semua butir kategori ini
+                    </span>
+
+                    <div className="flex justify-center w-full md:w-auto space-x-1.5 md:space-x-3">
+                        {[1, 2, 3, 4, 5, 6, 7].map((num) => {
+                            const isSelected = uniformCategoryValue === num;
+                            return (
+                                <button
+                                    key={num}
+                                    onClick={() => handleSelectAllInCategory(num)}
+                                    className="touch-manipulation outline-none cursor-pointer"
+                                >
+                                    <div className={`
+                                        w-9 h-8 md:w-12 md:h-9 rounded-lg border text-xs md:text-sm font-bold flex items-center justify-center transition-all duration-200 select-none
+                                        ${isSelected
+                                            ? 'bg-slate-700 text-white border-slate-700'
+                                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600 active:scale-95'
+                                        }
+                                    `}>
+                                        {num}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <span className="w-full md:w-1/4 text-center md:text-left text-[11px] text-slate-400">
+                        Masih bisa diubah per butir
+                    </span>
                 </div>
 
                 {/* Question Items */}
