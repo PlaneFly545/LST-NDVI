@@ -303,7 +303,15 @@ export default function Evaluasi() {
                     pembetulan setelah semua butir terlanjur dijawab. Lebar
                     kolomnya dibuat sama dengan baris butir supaya angka 1–7 di
                     sini tepat sejajar dengan angka 1–7 di bawahnya. */}
-                <div className="mb-3 md:mb-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 p-3 md:px-5 md:py-3 rounded-xl border border-dashed border-slate-200 bg-white">
+                <div className="relative mb-3 md:mb-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 p-3 md:px-5 md:py-3 rounded-xl border border-dashed border-slate-200 bg-white">
+                    {/* Label menempel di garis kotak, bukan di dalam salah satu
+                        kolom. Latar putihnya memotong garis putus-putus supaya
+                        terbaca sebagai judul kotak; kalau ditaruh di kolom kiri
+                        ia akan tampak seperti kutub kiri sebuah butir. */}
+                    <span className="absolute -top-2 left-4 px-1.5 bg-white text-[11px] font-medium text-slate-400 select-none">
+                        Isi serentak
+                    </span>
+
                     {/* Dua span kosong ini penyangga lebar, bukan sisa teks yang
                         terlupa: baris butir di bawah memakai label selebar 1/4 di
                         kiri dan kanan, dan tanpa penyangga yang sama angka 1–7 di
