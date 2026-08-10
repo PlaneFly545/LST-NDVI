@@ -43,5 +43,8 @@ next-env.d.ts
 # implementation plan
 implementation_plan.md
 
+# draf revisi naskah (bukan bagian dari aplikasi)
+/docs/
+
 # Claude config
 .claude/
