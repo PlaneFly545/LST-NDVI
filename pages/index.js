@@ -523,7 +523,7 @@ export default function Home() {
     if (mode !== analysisMode) {
       setAnalysisMode(mode);
       if (mode === 'prediksi') {
-        setChartMode('trend');
+        setChartMode('seasonal');
         setVisualMode('tunggal');
       }
       resetData();
@@ -839,19 +839,8 @@ export default function Home() {
   };
 
   // Helper untuk menyiapkan data tampilan grafik (menangani overlay prediksi jika ada)
-  // Titik prediksi memakai kunci `pred` tersendiri, bukan `value` yang sama
-  // dengan deret historis. Kalau keduanya berbagi kunci, garis putus-putus merah
-  // menimpa seluruh deret historis dan tooltip menyebut angka yang sama dua kali.
-  // Titik historis terakhir ikut diberi `pred` supaya garisnya tersambung.
-  const getDisplayChartData = (cData, currentStats) => {
-    if (!currentStats?.is_prediction || cData.length === 0) return cData;
-
-    const last = cData[cData.length - 1];
-    return [
-      ...cData.slice(0, -1),
-      { ...last, pred: last.value },
-      { year: currentStats.target_year, value: null, pred: currentStats.mean, isPred: true },
-    ];
+  const getDisplayChartData = (cData) => {
+    return cData;
   };
 
   // Generator Teks Interpretasi
@@ -909,11 +898,6 @@ export default function Home() {
 
       let text = `Dari ${first.year} ke ${last.year}, rata-rata tahunan ${paramName} ${trendDir} ${Math.abs(diff).toFixed(2)}${unitSuffix}, ${sifatTrend}.`;
 
-      if (currentStats?.is_prediction) {
-        const predDiff = currentStats.mean - last.value;
-        const predDir = predDiff > 0 ? 'naik' : 'turun';
-        text += ` Jika pola ini berlanjut, model memprediksi rata-rata tahunan ${predDir} ke ${currentStats.mean.toFixed(2)}${unitSuffix} pada ${currentStats.target_year}.`;
-      }
       return text;
     }
 
@@ -1121,7 +1105,7 @@ export default function Home() {
     const sceneCountByYear = new Map(activeScenes.map((item) => [Number(item.year), item.count]));
 
     const trendData = getTrendLineData(activeSData);
-    const displayChartData = getDisplayChartData(activeCData, activeStats);
+    const displayChartData = getDisplayChartData(activeCData);
 
     // Tahun yang belum tercakup dua belas bulan. `complete` baru ada sejak
     // pelonggaran periode; data lama (snapshot yang belum diregenerasi) tidak
@@ -1149,23 +1133,13 @@ export default function Home() {
       fontSize: 11, fill: '#64748b', style: { textAnchor: 'middle' },
     });
 
-    // Titik historis terakhir menyimpan salinan nilainya sendiri di kunci `pred`
-    // semata-mata sebagai jangkar agar garis putus-putus tersambung. Salinan itu
-    // bukan keluaran model, jadi barisnya dibuang dari tooltip: label "Prediksi"
-    // hanya boleh muncul di tahun target.
     const renderTrendTooltip = ({ active, payload, label }) => {
       if (!active || !payload?.length) return null;
 
-      const isPredPoint = payload[0]?.payload?.isPred === true;
-      const rows = payload.filter((row) => (
-        row.value !== null && row.value !== undefined
-        && (isPredPoint ? row.dataKey === 'pred' : row.dataKey !== 'pred')
-      ));
+      const rows = payload.filter((row) => row.value !== null && row.value !== undefined);
       if (rows.length === 0) return null;
 
-      // Jumlah citra hanya berlaku untuk titik historis. Tahun target prediksi
-      // tidak punya citra sama sekali — nilainya hasil ekstrapolasi model.
-      const sceneCount = isPredPoint ? undefined : sceneCountByYear.get(Number(label));
+      const sceneCount = sceneCountByYear.get(Number(label));
 
       // Tahun yang tercakup sebagian tidak boleh memakai kata "tahunan": yang
       // dihitung cuma bulan-bulan yang kebetulan masuk rentang, dan di daerah
@@ -1177,7 +1151,7 @@ export default function Home() {
           <p className="text-slate-500 mb-1">Tahun {label}</p>
           {rows.map((row) => (
             <p key={row.dataKey} style={{ color: row.color }}>
-              {takLengkap && row.dataKey !== 'pred' ? 'Rata-rata sebagian tahun' : row.name}
+              {takLengkap ? 'Rata-rata sebagian tahun' : row.name}
               {' : '}{withUnit(Number(row.value).toFixed(2), chartUnit)}
             </p>
           ))}
@@ -1248,17 +1222,19 @@ export default function Home() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1 rounded-lg">
-          <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-            <TrendingUp size={14} /> Tren Waktu
-          </button>
-          <button onClick={() => setChartMode('seasonal')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'seasonal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-            <BarChart3 size={14} /> Pola Musiman
-          </button>
-          <button onClick={() => setChartMode('scatter')} disabled={analysisMode === 'prediksi'} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'}`} title={analysisMode === 'prediksi' ? "Korelasi scatter tidak tersedia di mode prediksi" : ""}>
-            <ScatterIcon size={14} /> Korelasi
-          </button>
-        </div>
+        {analysisMode !== 'prediksi' && (
+          <div className="flex items-center gap-2 mb-3 bg-slate-100 p-1 rounded-lg">
+            <button onClick={() => setChartMode('trend')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <TrendingUp size={14} /> Tren Waktu
+            </button>
+            <button onClick={() => setChartMode('seasonal')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'seasonal' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <BarChart3 size={14} /> Pola Musiman
+            </button>
+            <button onClick={() => setChartMode('scatter')} className={`flex-1 text-xs py-2 px-3 rounded-md font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chartMode === 'scatter' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <ScatterIcon size={14} /> Korelasi
+            </button>
+          </div>
+        )}
 
         <div className="h-56 w-full relative">
           <ResponsiveContainer>
@@ -1298,9 +1274,6 @@ export default function Home() {
                   strokeWidth={2}
                   dot={renderTrendDot}
                 />
-                {activeStats?.is_prediction && (
-                  <Line type="monotone" dataKey="pred" name="Prediksi (rata-rata tahunan)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: "#f43f5e", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls={false} />
-                )}
               </LineChart>
             ) : chartMode === 'seasonal' ? (
               <LineChart data={seasonalChartData} margin={chartMargin}>
